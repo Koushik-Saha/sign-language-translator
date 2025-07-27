@@ -1,16 +1,17 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
+import { useHandDetection } from '@/hooks/useHandDetection';
 
-interface CameraCaptureProps {
-    onVideoReady?: (video: HTMLVideoElement) => void;
-}
-
-export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
+export default function CameraCapture() {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
+    const [isDetectionActive, setIsDetectionActive] = useState(false);
+
+    const { initializeHandDetection } = useHandDetection();
 
     useEffect(() => {
         startCamera();
@@ -21,7 +22,6 @@ export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
             setIsLoading(true);
             setError(null);
 
-            // Request camera permission
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     width: { ideal: 640 },
@@ -36,9 +36,6 @@ export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
                 videoRef.current.onloadedmetadata = () => {
                     setIsLoading(false);
                     setHasPermission(true);
-                    if (onVideoReady && videoRef.current) {
-                        onVideoReady(videoRef.current);
-                    }
                 };
             }
         } catch (err) {
@@ -48,12 +45,26 @@ export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
         }
     };
 
+    const startDetection = async () => {
+        if (videoRef.current && canvasRef.current && !isDetectionActive) {
+            try {
+                setError(null);
+                await initializeHandDetection(videoRef.current, canvasRef.current);
+                setIsDetectionActive(true);
+            } catch (err) {
+                console.error('Error starting detection:', err);
+                setError('Failed to start hand detection. Please try again.');
+            }
+        }
+    };
+
     const stopCamera = () => {
         if (videoRef.current && videoRef.current.srcObject) {
             const stream = videoRef.current.srcObject as MediaStream;
             stream.getTracks().forEach(track => track.stop());
             videoRef.current.srcObject = null;
             setHasPermission(false);
+            setIsDetectionActive(false);
         }
     };
 
@@ -63,13 +74,13 @@ export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
 
             <div className="relative">
                 {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200 rounded-lg">
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200 rounded-lg z-10">
                         <div className="text-gray-600">Loading camera...</div>
                     </div>
                 )}
 
                 {error && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-red-100 rounded-lg">
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-100 rounded-lg z-10">
                         <div className="text-red-600 text-center p-4">
                             <p>{error}</p>
                             <button
@@ -82,13 +93,23 @@ export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
                     </div>
                 )}
 
+                {/* Video element (hidden when detection is active) */}
                 <video
                     ref={videoRef}
                     autoPlay
                     playsInline
                     muted
-                    className="rounded-lg border-2 border-gray-300"
+                    className={`rounded-lg border-2 border-gray-300 ${isDetectionActive ? 'hidden' : ''}`}
                     style={{ width: '640px', height: '480px', transform: 'scaleX(-1)' }}
+                />
+
+                {/* Canvas for hand detection overlay */}
+                <canvas
+                    ref={canvasRef}
+                    width={640}
+                    height={480}
+                    className={`rounded-lg border-2 border-gray-300 ${!isDetectionActive ? 'hidden' : ''}`}
+                    style={{ transform: 'scaleX(-1)' }}
                 />
             </div>
 
@@ -106,6 +127,18 @@ export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
                 </button>
 
                 <button
+                    onClick={startDetection}
+                    disabled={!hasPermission || isDetectionActive}
+                    className={`px-6 py-2 rounded-lg font-medium ${
+                        !hasPermission || isDetectionActive
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                    }`}
+                >
+                    Start Detection
+                </button>
+
+                <button
                     onClick={stopCamera}
                     disabled={!hasPermission}
                     className={`px-6 py-2 rounded-lg font-medium ${
@@ -119,7 +152,9 @@ export default function CameraCapture({ onVideoReady }: CameraCaptureProps) {
             </div>
 
             {hasPermission && (
-                <p className="text-green-600 text-sm">✅ Camera is ready for sign language detection</p>
+                <p className="text-green-600 text-sm">
+                    ✅ Camera ready {isDetectionActive && '• Hand detection active'}
+                </p>
             )}
         </div>
     );
