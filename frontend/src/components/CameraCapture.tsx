@@ -6,6 +6,7 @@ import { useHandDetection } from '@/hooks/useHandDetection';
 export default function CameraCapture() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [mounted, setMounted] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
@@ -13,9 +14,16 @@ export default function CameraCapture() {
 
     const { initializeHandDetection } = useHandDetection();
 
+    // Fix hydration by only rendering after mount
     useEffect(() => {
-        startCamera();
+        setMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (mounted) {
+            startCamera();
+        }
+    }, [mounted]);
 
     const startCamera = async () => {
         try {
@@ -67,6 +75,15 @@ export default function CameraCapture() {
             setIsDetectionActive(false);
         }
     };
+
+    // Don't render until mounted (prevents hydration errors)
+    if (!mounted) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <div className="text-gray-500">Initializing...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col items-center space-y-4 p-4">

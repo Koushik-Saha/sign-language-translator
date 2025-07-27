@@ -14,6 +14,34 @@ interface UseHandDetectionReturn {
     lastDetection: HandDetectionResult | null;
 }
 
+// Load MediaPipe from CDN
+const loadMediaPipeScript = () => {
+    return new Promise((resolve, reject) => {
+        if ((window as any).Hands) {
+            resolve((window as any).Hands);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+        script.onload = () => {
+            const cameraScript = document.createElement('script');
+            cameraScript.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+            cameraScript.onload = () => {
+                const drawingScript = document.createElement('script');
+                drawingScript.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js';
+                drawingScript.onload = () => resolve((window as any).Hands);
+                drawingScript.onerror = reject;
+                document.head.appendChild(drawingScript);
+            };
+            cameraScript.onerror = reject;
+            document.head.appendChild(cameraScript);
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+};
+
 export function useHandDetection(): UseHandDetectionReturn {
     const handsRef = useRef<any>(null);
     const isDetectingRef = useRef(false);
@@ -21,18 +49,22 @@ export function useHandDetection(): UseHandDetectionReturn {
 
     const initializeHandDetection = useCallback(async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
         try {
-            // Dynamic import of MediaPipe
-            const { Hands } = await import('@mediapipe/hands');
-            const { Camera } = await import('@mediapipe/camera_utils');
-            const { drawConnectors, drawLandmarks } = await import('@mediapipe/drawing_utils');
-            const { HAND_CONNECTIONS } = await import('@mediapipe/hands');
+            console.log('Loading MediaPipe...');
+            await loadMediaPipeScript();
 
             const canvasCtx = canvas.getContext('2d');
             if (!canvasCtx) throw new Error('Cannot get canvas context');
 
+            // Access MediaPipe from window object
+            const { Hands, HAND_CONNECTIONS } = (window as any);
+            const { Camera } = (window as any);
+            const { drawConnectors, drawLandmarks } = (window as any);
+
+            console.log('MediaPipe loaded, creating Hands instance...');
+
             // Configure MediaPipe Hands
             const hands = new Hands({
-                locateFile: (file) => {
+                locateFile: (file: string) => {
                     return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
                 }
             });
@@ -44,7 +76,7 @@ export function useHandDetection(): UseHandDetectionReturn {
                 minTrackingConfidence: 0.5
             });
 
-            hands.onResults((results) => {
+            hands.onResults((results: any) => {
                 // Clear canvas
                 canvasCtx.save();
                 canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
@@ -53,11 +85,11 @@ export function useHandDetection(): UseHandDetectionReturn {
                 canvasCtx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
                 // Draw hand landmarks
-                if (results.multiHandLandmarks) {
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                     for (let i = 0; i < results.multiHandLandmarks.length; i++) {
                         const landmarks = results.multiHandLandmarks[i];
-                        const handedness = results.multiHandedness[i].label;
-                        const confidence = results.multiHandedness[i].score;
+                        const handedness = results.multiHandedness?.[i]?.label || 'Unknown';
+                        const confidence = results.multiHandedness?.[i]?.score || 0;
 
                         // Store detection result
                         lastDetectionRef.current = {
@@ -67,17 +99,21 @@ export function useHandDetection(): UseHandDetectionReturn {
                         };
 
                         // Draw connections
-                        drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-                            color: '#00FF00',
-                            lineWidth: 2
-                        });
+                        if (drawConnectors && HAND_CONNECTIONS) {
+                            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+                                color: '#00FF00',
+                                lineWidth: 2
+                            });
+                        }
 
                         // Draw landmarks
-                        drawLandmarks(canvasCtx, landmarks, {
-                            color: '#FF0000',
-                            lineWidth: 1,
-                            radius: 3
-                        });
+                        if (drawLandmarks) {
+                            drawLandmarks(canvasCtx, landmarks, {
+                                color: '#FF0000',
+                                lineWidth: 1,
+                                radius: 3
+                            });
+                        }
 
                         // Display hand info
                         canvasCtx.fillStyle = '#00FF00';
@@ -93,10 +129,12 @@ export function useHandDetection(): UseHandDetectionReturn {
                 canvasCtx.restore();
             });
 
+            console.log('Setting up camera...');
+
             // Initialize camera
             const camera = new Camera(video, {
                 onFrame: async () => {
-                    if (isDetectingRef.current) {
+                    if (isDetectingRef.current && hands) {
                         await hands.send({ image: video });
                     }
                 },
@@ -108,7 +146,7 @@ export function useHandDetection(): UseHandDetectionReturn {
             isDetectingRef.current = true;
 
             // Start camera
-            camera.start();
+            await camera.start();
 
             console.log('✅ Hand detection initialized successfully');
 

@@ -1,4 +1,4 @@
-import CameraCapture from '@/components/CameraCapture';
+import CameraSection from '@/components/CameraSection';
 
 export default function Home() {
   return (
@@ -21,7 +21,7 @@ export default function Home() {
 
             {/* Camera Section */}
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <CameraCapture />
+              <CameraSection />
             </div>
 
             {/* Translation Output Section */}
