@@ -1,26 +1,24 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-require('dotenv').config();
-
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 3001;
 
-// Middleware
-app.use(helmet());
 app.use(cors());
-app.use(morgan('combined'));
+app.use((req, res, next) => {
+  console.log(`📍 ${req.method} ${req.path} - Body:`, req.body);
+  next();
+});
 app.use(express.json());
 
-// Basic route
 app.get('/', (req, res) => {
   res.json({ message: 'Sign Language Translation API is running!' });
 });
 
-// API routes
-app.use('/api', require('./api'));
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+app.post('/api/translate', (req, res) => {
+  const { word, type } = req.body;
+  const translations = { 'HELLO': 'Hello', 'HI': 'Hi' };
+  const translation = translations[word.toUpperCase()] || `"${word}" (unknown)`;
+  res.json({ original: word, translation, confidence: 0.9 });
 });
+
+app.listen(PORT, () => console.log(`🚀 Server running on port 3001`));
