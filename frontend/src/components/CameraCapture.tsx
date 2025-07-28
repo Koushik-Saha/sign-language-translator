@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useHandDetection } from '@/hooks/useHandDetection';
-import { useWordFormation } from '@/hooks/useWordFormation';
+import { useTranslation } from '@/context/TranslationContext';
 
 export default function CameraCapture() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -16,12 +16,11 @@ export default function CameraCapture() {
     const { initializeHandDetection, currentGesture } = useHandDetection();
     const {
         currentWord,
-        addLetter,
-        removeLetter,
-        clearWord,
-        submitWord,
-        isLoading: isSubmitting
-    } = useWordFormation();
+        setCurrentWord,
+        addTranslation,
+        isTranslating,
+        setIsTranslating
+    } = useTranslation();
 
     // Fix hydration by only rendering after mount
     useEffect(() => {
@@ -77,15 +76,53 @@ export default function CameraCapture() {
 
     const handleCaptureLetter = () => {
         if (currentGesture && currentGesture.letter && currentGesture.letter !== '?') {
-            addLetter(currentGesture.letter, currentGesture.confidence);
+            setCurrentWord(currentWord + currentGesture.letter);
         }
     };
 
+    const handleRemoveLetter = () => {
+        setCurrentWord(currentWord.slice(0, -1));
+    };
+
+    const handleClearWord = () => {
+        setCurrentWord('');
+    };
+
     const handleSubmitWord = async () => {
+        if (!currentWord.trim() || isTranslating) return;
+
+        setIsTranslating(true);
         try {
-            await submitWord();
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/translate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    word: currentWord,
+                    type: 'sign_to_text'
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Translation failed');
+            }
+
+            const result = await response.json();
+
+            // Add to translation history
+            addTranslation({
+                original: result.original,
+                translation: result.translation,
+                confidence: result.confidence || 0.8,
+                type: 'sign_to_text'
+            });
+
         } catch (error) {
-            setError('Failed to submit word. Please try again.');
+            console.error('Error submitting word:', error);
+            setError('Failed to translate word. Please try again.');
+        } finally {
+            setIsTranslating(false);
         }
     };
 
@@ -198,7 +235,7 @@ export default function CameraCapture() {
 
                     <div className="flex space-x-2 mt-3">
                         <button
-                            onClick={removeLetter}
+                            onClick={handleRemoveLetter}
                             disabled={!currentWord}
                             className={`px-3 py-1 rounded text-sm ${
                                 currentWord
@@ -210,7 +247,7 @@ export default function CameraCapture() {
                         </button>
 
                         <button
-                            onClick={clearWord}
+                            onClick={handleClearWord}
                             disabled={!currentWord}
                             className={`px-3 py-1 rounded text-sm ${
                                 currentWord
@@ -223,14 +260,14 @@ export default function CameraCapture() {
 
                         <button
                             onClick={handleSubmitWord}
-                            disabled={!currentWord || isSubmitting}
+                            disabled={!currentWord || isTranslating}
                             className={`flex-1 px-3 py-1 rounded text-sm ${
-                                currentWord && !isSubmitting
+                                currentWord && !isTranslating
                                     ? 'bg-green-500 text-white hover:bg-green-600'
                                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             }`}
                         >
-                            {isSubmitting ? 'Translating...' : 'Translate Word'}
+                            {isTranslating ? 'Translating...' : 'Translate Word'}
                         </button>
                     </div>
                 </div>
