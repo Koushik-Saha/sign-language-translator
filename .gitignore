@@ -1,0 +1,9 @@
+echo "node_modules/
+*.log
+.env
+__pycache__/
+*.pyc
+.DS_Store
+dist/
+build/
+.vscode/settings.json" > .gitignore

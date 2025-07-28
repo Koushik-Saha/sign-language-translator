@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useHandDetection } from '@/hooks/useHandDetection';
+import { useWordFormation } from '@/hooks/useWordFormation';
 
 export default function CameraCapture() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -13,6 +14,14 @@ export default function CameraCapture() {
     const [isDetectionActive, setIsDetectionActive] = useState(false);
 
     const { initializeHandDetection, currentGesture } = useHandDetection();
+    const {
+        currentWord,
+        addLetter,
+        removeLetter,
+        clearWord,
+        submitWord,
+        isLoading: isSubmitting
+    } = useWordFormation();
 
     // Fix hydration by only rendering after mount
     useEffect(() => {
@@ -63,6 +72,20 @@ export default function CameraCapture() {
                 console.error('Error starting detection:', err);
                 setError('Failed to start hand detection. Please try again.');
             }
+        }
+    };
+
+    const handleCaptureLetter = () => {
+        if (currentGesture && currentGesture.letter && currentGesture.letter !== '?') {
+            addLetter(currentGesture.letter, currentGesture.confidence);
+        }
+    };
+
+    const handleSubmitWord = async () => {
+        try {
+            await submitWord();
+        } catch (error) {
+            setError('Failed to submit word. Please try again.');
         }
     };
 
@@ -135,7 +158,7 @@ export default function CameraCapture() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full max-w-md">
                     <h3 className="font-semibold text-blue-800 mb-2">Current Gesture</h3>
                     {currentGesture ? (
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                             <div className="text-2xl font-bold text-blue-900">
                                 Letter: {currentGesture.letter}
                             </div>
@@ -145,10 +168,71 @@ export default function CameraCapture() {
                             <div className="text-sm text-blue-600">
                                 {currentGesture.description}
                             </div>
+
+                            {/* Capture Letter Button */}
+                            <button
+                                onClick={handleCaptureLetter}
+                                disabled={!currentGesture.letter || currentGesture.letter === '?'}
+                                className={`w-full mt-2 px-4 py-2 rounded font-medium ${
+                                    currentGesture.letter && currentGesture.letter !== '?'
+                                        ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
+                            >
+                                Capture Letter
+                            </button>
                         </div>
                     ) : (
                         <div className="text-gray-500">No gesture detected</div>
                     )}
+                </div>
+            )}
+
+            {/* Word Formation Display */}
+            {isDetectionActive && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 w-full max-w-md">
+                    <h3 className="font-semibold text-green-800 mb-2">Current Word</h3>
+                    <div className="text-2xl font-mono bg-white border rounded p-2 min-h-[50px] flex items-center">
+                        {currentWord || <span className="text-gray-400">Letters will appear here...</span>}
+                    </div>
+
+                    <div className="flex space-x-2 mt-3">
+                        <button
+                            onClick={removeLetter}
+                            disabled={!currentWord}
+                            className={`px-3 py-1 rounded text-sm ${
+                                currentWord
+                                    ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                            Delete
+                        </button>
+
+                        <button
+                            onClick={clearWord}
+                            disabled={!currentWord}
+                            className={`px-3 py-1 rounded text-sm ${
+                                currentWord
+                                    ? 'bg-red-500 text-white hover:bg-red-600'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                            Clear
+                        </button>
+
+                        <button
+                            onClick={handleSubmitWord}
+                            disabled={!currentWord || isSubmitting}
+                            className={`flex-1 px-3 py-1 rounded text-sm ${
+                                currentWord && !isSubmitting
+                                    ? 'bg-green-500 text-white hover:bg-green-600'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                            {isSubmitting ? 'Translating...' : 'Translate Word'}
+                        </button>
+                    </div>
                 </div>
             )}
 
