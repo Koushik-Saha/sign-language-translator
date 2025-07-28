@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
+import { GestureRecognizer, GestureResult } from '@/services/gestureRecognition';
 
 interface HandDetectionResult {
     landmarks: any[];
@@ -12,6 +13,7 @@ interface UseHandDetectionReturn {
     initializeHandDetection: (video: HTMLVideoElement, canvas: HTMLCanvasElement) => Promise<void>;
     isDetecting: boolean;
     lastDetection: HandDetectionResult | null;
+    currentGesture: GestureResult | null;
 }
 
 // Load MediaPipe from CDN
@@ -46,6 +48,8 @@ export function useHandDetection(): UseHandDetectionReturn {
     const handsRef = useRef<any>(null);
     const isDetectingRef = useRef(false);
     const lastDetectionRef = useRef<HandDetectionResult | null>(null);
+    const [currentGesture, setCurrentGesture] = useState<GestureResult | null>(null);
+    const gestureRecognizer = useRef(new GestureRecognizer());
 
     const initializeHandDetection = useCallback(async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
         try {
@@ -70,7 +74,7 @@ export function useHandDetection(): UseHandDetectionReturn {
             });
 
             hands.setOptions({
-                maxNumHands: 2,
+                maxNumHands: 1, // Focus on one hand for better recognition
                 modelComplexity: 1,
                 minDetectionConfidence: 0.7,
                 minTrackingConfidence: 0.5
@@ -84,46 +88,70 @@ export function useHandDetection(): UseHandDetectionReturn {
                 // Draw video frame
                 canvasCtx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-                // Draw hand landmarks
+                // Draw hand landmarks and recognize gestures
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-                        const landmarks = results.multiHandLandmarks[i];
-                        const handedness = results.multiHandedness?.[i]?.label || 'Unknown';
-                        const confidence = results.multiHandedness?.[i]?.score || 0;
+                    const landmarks = results.multiHandLandmarks[0]; // Focus on first hand
+                    const handedness = results.multiHandedness?.[0]?.label || 'Unknown';
+                    const confidence = results.multiHandedness?.[0]?.score || 0;
 
-                        // Store detection result
-                        lastDetectionRef.current = {
-                            landmarks: landmarks,
-                            handedness: handedness,
-                            confidence: confidence
-                        };
+                    // Store detection result
+                    lastDetectionRef.current = {
+                        landmarks: landmarks,
+                        handedness: handedness,
+                        confidence: confidence
+                    };
 
-                        // Draw connections
-                        if (drawConnectors && HAND_CONNECTIONS) {
-                            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-                                color: '#00FF00',
-                                lineWidth: 2
-                            });
-                        }
+                    // Recognize gesture
+                    const gestureResult = gestureRecognizer.current.recognizeGesture(landmarks);
+                    setCurrentGesture(gestureResult);
 
-                        // Draw landmarks
-                        if (drawLandmarks) {
-                            drawLandmarks(canvasCtx, landmarks, {
-                                color: '#FF0000',
-                                lineWidth: 1,
-                                radius: 3
-                            });
-                        }
+                    // Draw connections
+                    if (drawConnectors && HAND_CONNECTIONS) {
+                        drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+                            color: '#00FF00',
+                            lineWidth: 2
+                        });
+                    }
 
-                        // Display hand info
-                        canvasCtx.fillStyle = '#00FF00';
-                        canvasCtx.font = '16px Arial';
+                    // Draw landmarks
+                    if (drawLandmarks) {
+                        drawLandmarks(canvasCtx, landmarks, {
+                            color: '#FF0000',
+                            lineWidth: 1,
+                            radius: 3
+                        });
+                    }
+
+                    // Display hand info
+                    canvasCtx.fillStyle = '#00FF00';
+                    canvasCtx.font = '16px Arial';
+                    canvasCtx.fillText(
+                        `${handedness} Hand (${(confidence * 100).toFixed(1)}%)`,
+                        10,
+                        30
+                    );
+
+                    // Display recognized letter
+                    if (gestureResult.letter && gestureResult.letter !== '?') {
+                        canvasCtx.fillStyle = '#FFD700';
+                        canvasCtx.font = 'bold 24px Arial';
                         canvasCtx.fillText(
-                            `${handedness} Hand (${(confidence * 100).toFixed(1)}%)`,
+                            `Letter: ${gestureResult.letter}`,
                             10,
-                            30 + (i * 25)
+                            60
+                        );
+
+                        canvasCtx.fillStyle = '#FFFFFF';
+                        canvasCtx.font = '14px Arial';
+                        canvasCtx.fillText(
+                            `Confidence: ${(gestureResult.confidence * 100).toFixed(1)}%`,
+                            10,
+                            85
                         );
                     }
+                } else {
+                    // No hands detected
+                    setCurrentGesture(null);
                 }
 
                 canvasCtx.restore();
@@ -148,7 +176,7 @@ export function useHandDetection(): UseHandDetectionReturn {
             // Start camera
             await camera.start();
 
-            console.log('✅ Hand detection initialized successfully');
+            console.log('✅ Hand detection with gesture recognition initialized successfully');
 
         } catch (error) {
             console.error('❌ Error initializing hand detection:', error);
@@ -159,6 +187,7 @@ export function useHandDetection(): UseHandDetectionReturn {
     return {
         initializeHandDetection,
         isDetecting: isDetectingRef.current,
-        lastDetection: lastDetectionRef.current
+        lastDetection: lastDetectionRef.current,
+        currentGesture
     };
 }

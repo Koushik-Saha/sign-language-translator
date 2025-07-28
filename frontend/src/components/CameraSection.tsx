@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic';
 
-// Dynamically import CameraCapture with no SSR in a Client Component
 const CameraCapture = dynamic(() => import('./CameraCapture'), {
     ssr: false,
     loading: () => (
