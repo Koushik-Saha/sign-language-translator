@@ -50,6 +50,7 @@ export function useHandDetection(): UseHandDetectionReturn {
     const lastDetectionRef = useRef<HandDetectionResult | null>(null);
     const [currentGesture, setCurrentGesture] = useState<GestureResult | null>(null);
     const gestureRecognizer = useRef(new GestureRecognizer());
+    const noHandFrames = useRef(0);
 
     const initializeHandDetection = useCallback(async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
         try {
@@ -66,7 +67,7 @@ export function useHandDetection(): UseHandDetectionReturn {
 
             console.log('MediaPipe loaded, creating Hands instance...');
 
-            // Configure MediaPipe Hands
+            // Configure MediaPipe Hands with optimized settings
             const hands = new Hands({
                 locateFile: (file: string) => {
                     return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -74,10 +75,10 @@ export function useHandDetection(): UseHandDetectionReturn {
             });
 
             hands.setOptions({
-                maxNumHands: 1, // Focus on one hand for better recognition
+                maxNumHands: 1,
                 modelComplexity: 1,
-                minDetectionConfidence: 0.7,
-                minTrackingConfidence: 0.5
+                minDetectionConfidence: 0.8, // Increased for better accuracy
+                minTrackingConfidence: 0.7   // Increased for stability
             });
 
             hands.onResults((results: any) => {
@@ -101,34 +102,42 @@ export function useHandDetection(): UseHandDetectionReturn {
                         confidence: confidence
                     };
 
+                    // Reset no-hand counter
+                    noHandFrames.current = 0;
+
                     // Recognize gesture
                     const gestureResult = gestureRecognizer.current.recognizeGesture(landmarks);
                     setCurrentGesture(gestureResult);
 
-                    // Draw connections
+                    // Draw connections with quality-based color
+                    const connectionColor = gestureResult.quality === 'excellent' ? '#00FF00' :
+                        gestureResult.quality === 'good' ? '#FFFF00' :
+                            gestureResult.quality === 'fair' ? '#FFA500' : '#FF0000';
+
                     if (drawConnectors && HAND_CONNECTIONS) {
                         drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-                            color: '#00FF00',
+                            color: connectionColor,
                             lineWidth: 2
                         });
                     }
 
-                    // Draw landmarks
+                    // Draw landmarks with confidence-based size
                     if (drawLandmarks) {
+                        const landmarkRadius = Math.max(2, gestureResult.confidence * 5);
                         drawLandmarks(canvasCtx, landmarks, {
                             color: '#FF0000',
                             lineWidth: 1,
-                            radius: 3
+                            radius: landmarkRadius
                         });
                     }
 
                     // FIXED: Draw text with proper mirroring
                     canvasCtx.save();
-                    canvasCtx.scale(-1, 1); // Flip text back to normal
+                    canvasCtx.scale(-1, 1);
                     canvasCtx.translate(-canvas.width, 0);
 
                     // Display hand info
-                    canvasCtx.fillStyle = '#00FF00';
+                    canvasCtx.fillStyle = connectionColor;
                     canvasCtx.font = '16px Arial';
                     canvasCtx.fillText(
                         `${handedness} Hand (${(confidence * 100).toFixed(1)}%)`,
@@ -136,29 +145,42 @@ export function useHandDetection(): UseHandDetectionReturn {
                         30
                     );
 
-                    // Display recognized letter
+                    // Display recognized letter with quality indicator
                     if (gestureResult.letter && gestureResult.letter !== '?') {
                         canvasCtx.fillStyle = '#FFD700';
-                        canvasCtx.font = 'bold 24px Arial';
+                        canvasCtx.font = 'bold 28px Arial';
                         canvasCtx.fillText(
                             `Letter: ${gestureResult.letter}`,
                             10,
-                            60
+                            65
+                        );
+
+                        canvasCtx.fillStyle = connectionColor;
+                        canvasCtx.font = '14px Arial';
+                        canvasCtx.fillText(
+                            `Quality: ${gestureResult.quality.toUpperCase()}`,
+                            10,
+                            85
                         );
 
                         canvasCtx.fillStyle = '#FFFFFF';
-                        canvasCtx.font = '14px Arial';
+                        canvasCtx.font = '12px Arial';
                         canvasCtx.fillText(
                             `Confidence: ${(gestureResult.confidence * 100).toFixed(1)}%`,
                             10,
-                            85
+                            105
                         );
                     }
 
                     canvasCtx.restore();
                 } else {
-                    // No hands detected
-                    setCurrentGesture(null);
+                    // No hands detected - clear history after several frames
+                    noHandFrames.current++;
+                    if (noHandFrames.current > 10) {
+                        gestureRecognizer.current.clearHistory();
+                        setCurrentGesture(null);
+                        lastDetectionRef.current = null;
+                    }
                 }
 
                 canvasCtx.restore();
@@ -166,7 +188,7 @@ export function useHandDetection(): UseHandDetectionReturn {
 
             console.log('Setting up camera...');
 
-            // Initialize camera
+            // Initialize camera with improved settings
             const camera = new Camera(video, {
                 onFrame: async () => {
                     if (isDetectingRef.current && hands) {
@@ -183,7 +205,7 @@ export function useHandDetection(): UseHandDetectionReturn {
             // Start camera
             await camera.start();
 
-            console.log('✅ Hand detection with gesture recognition initialized successfully');
+            console.log('✅ Enhanced hand detection with improved recognition initialized successfully');
 
         } catch (error) {
             console.error('❌ Error initializing hand detection:', error);
