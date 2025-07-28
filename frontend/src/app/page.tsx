@@ -1,16 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-
-// Now we can use ssr: false in a Client Component
-const CameraSection = dynamic(() => import('@/components/CameraSection'), {
-    ssr: false,
-    loading: () => (
-        <div className="flex items-center justify-center h-96">
-            <div className="text-gray-500">Loading camera...</div>
-        </div>
-    )
-});
+import NoSSR from '@/components/NoSSR';
+import CameraSection from '@/components/CameraSection';
 
 export default function Home() {
     return (
@@ -31,9 +22,17 @@ export default function Home() {
             <div className="max-w-7xl mx-auto px-4 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-                    {/* Camera Section */}
+                    {/* Camera Section - Completely prevent SSR */}
                     <div className="bg-white rounded-lg shadow-lg p-6">
-                        <CameraSection />
+                        <NoSSR
+                            fallback={
+                                <div className="flex items-center justify-center h-96">
+                                    <div className="text-gray-500">Loading camera system...</div>
+                                </div>
+                            }
+                        >
+                            <CameraSection />
+                        </NoSSR>
                     </div>
 
                     {/* Translation Output Section */}

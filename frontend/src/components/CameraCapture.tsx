@@ -12,7 +12,7 @@ export default function CameraCapture() {
     const [hasPermission, setHasPermission] = useState(false);
     const [isDetectionActive, setIsDetectionActive] = useState(false);
 
-    const { initializeHandDetection } = useHandDetection();
+    const { initializeHandDetection, currentGesture } = useHandDetection();
 
     // Fix hydration by only rendering after mount
     useEffect(() => {
@@ -129,6 +129,28 @@ export default function CameraCapture() {
                     style={{ transform: 'scaleX(-1)' }}
                 />
             </div>
+
+            {/* Current Gesture Display */}
+            {isDetectionActive && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full max-w-md">
+                    <h3 className="font-semibold text-blue-800 mb-2">Current Gesture</h3>
+                    {currentGesture ? (
+                        <div className="space-y-1">
+                            <div className="text-2xl font-bold text-blue-900">
+                                Letter: {currentGesture.letter}
+                            </div>
+                            <div className="text-sm text-blue-700">
+                                Confidence: {(currentGesture.confidence * 100).toFixed(1)}%
+                            </div>
+                            <div className="text-sm text-blue-600">
+                                {currentGesture.description}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-gray-500">No gesture detected</div>
+                    )}
+                </div>
+            )}
 
             <div className="flex space-x-4">
                 <button

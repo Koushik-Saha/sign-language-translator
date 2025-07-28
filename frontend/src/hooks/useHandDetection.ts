@@ -90,7 +90,7 @@ export function useHandDetection(): UseHandDetectionReturn {
 
                 // Draw hand landmarks and recognize gestures
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    const landmarks = results.multiHandLandmarks[0]; // Focus on first hand
+                    const landmarks = results.multiHandLandmarks[0];
                     const handedness = results.multiHandedness?.[0]?.label || 'Unknown';
                     const confidence = results.multiHandedness?.[0]?.score || 0;
 
@@ -122,6 +122,11 @@ export function useHandDetection(): UseHandDetectionReturn {
                         });
                     }
 
+                    // FIXED: Draw text with proper mirroring
+                    canvasCtx.save();
+                    canvasCtx.scale(-1, 1); // Flip text back to normal
+                    canvasCtx.translate(-canvas.width, 0);
+
                     // Display hand info
                     canvasCtx.fillStyle = '#00FF00';
                     canvasCtx.font = '16px Arial';
@@ -149,6 +154,8 @@ export function useHandDetection(): UseHandDetectionReturn {
                             85
                         );
                     }
+
+                    canvasCtx.restore();
                 } else {
                     // No hands detected
                     setCurrentGesture(null);
