@@ -1,41 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Enhanced focus indicators */
-*:focus-visible {
-  outline: 3px solid #3B82F6 !important;
-  outline-offset: 2px !important;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-/* Screen reader only utility */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .bg-white { background-color: #ffffff !important; }
-  .text-gray-900 { color: #000000 !important; }
-  .border-gray-200 { border-color: #000000 !important; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .animate-pulse, .animate-spin { animation: none !important; }
-  .transition-all { transition: none !important; }
-  .transform { transform: none !important; }
-}
-
-/* Minimum touch targets on mobile */
-@media (max-width: 768px) {
-  button { min-height: 48px; min-width: 48px; }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
