@@ -192,7 +192,7 @@ export default function CameraCapture() {
 
             {/* Main video container */}
             <div className="mb-6">
-                <div className="relative bg-black rounded-xl overflow-hidden aspect-video w-full max-w-full">
+                <div className="relative bg-black rounded-xl overflow-hidden aspect-video w-full max-w-full h-102">
                     {isLoading && (
                         <div
                             className="absolute inset-0 flex items-center justify-center bg-gray-100 z-20"
@@ -247,7 +247,7 @@ export default function CameraCapture() {
                         ref={canvasRef}
                         width={640}
                         height={480}
-                        className={`w-full h-full object-cover ${!isDetectionActive ? 'hidden' : ''}`}
+                        className={`ml-0.5 w-full h-full object-cover ${!isDetectionActive ? 'hidden' : ''}`}
                         style={{ transform: 'scaleX(-1)' }}
                         aria-label="Hand detection visualization"
                         aria-describedby="canvas-instructions"
