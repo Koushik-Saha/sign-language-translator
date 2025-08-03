@@ -510,7 +510,6 @@ export default function CameraCapture() {
             {(recognitionMode === 'word' || recognitionMode === 'hybrid') && (
                 <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
                     <h3 className="font-bold text-orange-900 mb-3 flex items-center gap-2">
-                        <span role="img" aria-label="Categories">📚</span>
                         Quick Word Categories
                     </h3>
 

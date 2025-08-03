@@ -283,6 +283,23 @@ export function useWordRecognition() {
         translateRecognizedWord,
 
         // Word categories
-        wordCategories: ['greeting', 'common', 'question', 'emotion', 'family', 'action']
+        wordCategories: [
+            'action',
+            'adjective',
+            'color',
+            'common',
+            'education',
+            'emotion',
+            'family',
+            'greeting',
+            'modifier',
+            'number',
+            'place',
+            'pronoun',
+            'question',
+            'relationship',
+            'technology',
+            'time',
+        ]
     };
 }

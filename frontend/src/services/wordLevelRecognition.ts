@@ -4,12 +4,12 @@ export interface WordGesturePattern {
     duration: number; // milliseconds
     handMovements?: MovementPattern[];
     confidence: number;
-    category: 'greeting' | 'common' | 'question' | 'emotion' | 'family' | 'action';
+    category: 'greeting' | 'common' | 'question' | 'emotion' | 'family' | 'action' | 'pronoun' | 'number' | 'color' | 'time' | 'relationship' | 'education' | 'place' | 'modifier' | 'technology' | 'adjective';
 }
 
 export interface MovementPattern {
-    type: 'static' | 'linear' | 'circular' | 'shake' | 'tap';
-    direction?: 'up' | 'down' | 'left' | 'right' | 'forward' | 'backward';
+    type: 'static' | 'linear' | 'circular' | 'shake' | 'tap' | 'flick' | 'twist' | 'open_close' | 'brush' | 'wiggle' | 'rock' | 'split' | 'merge';
+    direction?: 'up' | 'down' | 'left' | 'right' | 'forward' | 'backward' |  'toward' | 'inward' | 'outward';
     repetitions?: number;
     speed: 'slow' | 'medium' | 'fast';
 }
@@ -33,46 +33,863 @@ export interface WordRecognitionResult {
 
 export class WordLevelRecognizer {
     private wordVocabulary: WordGesturePattern[] = [
-        // Greetings
-        { word: 'HELLO', gestures: ['OPEN_HAND', 'WAVE'], duration: 1500, handMovements: [{ type: 'shake', speed: 'medium', repetitions: 2 }], confidence: 0.9, category: 'greeting' },
-        { word: 'HI', gestures: ['WAVE'], duration: 1000, handMovements: [{ type: 'shake', speed: 'fast', repetitions: 3 }], confidence: 0.85, category: 'greeting' },
-        { word: 'BYE', gestures: ['OPEN_HAND', 'WAVE'], duration: 2000, handMovements: [{ type: 'shake', speed: 'slow', repetitions: 4 }], confidence: 0.9, category: 'greeting' },
-        { word: 'GOODBYE', gestures: ['OPEN_HAND', 'WAVE', 'CLOSE'], duration: 3000, handMovements: [{ type: 'linear', direction: 'right', speed: 'slow' }], confidence: 0.8, category: 'greeting' },
+        // === Basic Pronouns ===
+        {
+            word: 'I',
+            gestures: ['POINT_SELF'],
+            duration: 800,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.9,
+            category: 'pronoun'
+        },
+        {
+            word: 'YOU',
+            gestures: ['POINT_FORWARD'],
+            duration: 800,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.9,
+            category: 'pronoun'
+        },
+        {
+            word: 'WE',
+            gestures: ['POINT_CIRCLE_SELF'],
+            duration: 1000,
+            handMovements: [{type: 'circular', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'pronoun'
+        },
+        {
+            word: 'HE',
+            gestures: ['POINT_SIDE'],
+            duration: 900,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'pronoun'
+        },
+        {
+            word: 'SHE',
+            gestures: ['POINT_SIDE'],
+            duration: 900,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'pronoun'
+        },
+        {
+            word: 'THEY',
+            gestures: ['POINT_ARC'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'right', speed: 'medium'}],
+            confidence: 0.8,
+            category: 'pronoun'
+        },
+        {
+            word: 'IT',
+            gestures: ['POINT_OBJECT'],
+            duration: 900,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'pronoun'
+        },
 
-        // Common Responses
-        { word: 'YES', gestures: ['FIST', 'NOD'], duration: 1200, handMovements: [{ type: 'linear', direction: 'down', speed: 'medium', repetitions: 2 }], confidence: 0.9, category: 'common' },
-        { word: 'NO', gestures: ['INDEX_MIDDLE', 'SHAKE'], duration: 1000, handMovements: [{ type: 'shake', speed: 'fast', repetitions: 3 }], confidence: 0.85, category: 'common' },
-        { word: 'PLEASE', gestures: ['OPEN_HAND', 'CIRCULAR'], duration: 1500, handMovements: [{ type: 'circular', speed: 'medium' }], confidence: 0.8, category: 'common' },
-        { word: 'THANK_YOU', gestures: ['OPEN_HAND', 'FORWARD'], duration: 1800, handMovements: [{ type: 'linear', direction: 'forward', speed: 'medium' }], confidence: 0.9, category: 'common' },
-        { word: 'SORRY', gestures: ['FIST', 'CIRCULAR'], duration: 2000, handMovements: [{ type: 'circular', speed: 'slow' }], confidence: 0.8, category: 'emotion' },
+        // === Verbs / Common Actions ===
+        {
+            word: 'WANT',
+            gestures: ['FLAT_HAND_PULL'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'toward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'NEED',
+            gestures: ['X_SHAPE'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'LIKE',
+            gestures: ['FLAT_HAND_CHEST'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'emotion'
+        },
+        {
+            word: 'KNOW',
+            gestures: ['FLAT_HAND_FOREHEAD'],
+            duration: 900,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'UNDERSTAND',
+            gestures: ['INDEX_UP'],
+            duration: 1000,
+            handMovements: [{type: 'flick', repetitions: 1, speed: 'fast'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'GO',
+            gestures: ['POINT_FORWARD_MOVE'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'forward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'COME',
+            gestures: ['POINT_PULL'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'toward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'LOOK',
+            gestures: ['V_SHAPE_FORWARD'],
+            duration: 900,
+            handMovements: [{type: 'linear', direction: 'forward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'MAKE',
+            gestures: ['S_HANDS_TWIST'],
+            duration: 1200,
+            handMovements: [{type: 'twist', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'WORK',
+            gestures: ['S_HANDS_TAP'],
+            duration: 900,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'action'
+        },
 
-        // Questions
-        { word: 'WHAT', gestures: ['INDEX', 'SHAKE'], duration: 800, handMovements: [{ type: 'shake', speed: 'fast', repetitions: 2 }], confidence: 0.85, category: 'question' },
-        { word: 'WHERE', gestures: ['INDEX', 'POINT'], duration: 1000, handMovements: [{ type: 'linear', direction: 'left', speed: 'medium' }, { type: 'linear', direction: 'right', speed: 'medium' }], confidence: 0.8, category: 'question' },
-        { word: 'WHEN', gestures: ['INDEX', 'CIRCULAR'], duration: 1200, handMovements: [{ type: 'circular', speed: 'medium' }], confidence: 0.75, category: 'question' },
-        { word: 'HOW', gestures: ['FIST', 'ROLL'], duration: 1500, handMovements: [{ type: 'circular', speed: 'slow' }], confidence: 0.8, category: 'question' },
-        { word: 'WHY', gestures: ['Y_HAND', 'TOUCH_FOREHEAD'], duration: 1200, handMovements: [{ type: 'tap', repetitions: 1, speed: 'medium' }], confidence: 0.85, category: 'question' },
+        // === Objects / Everyday Words ===
+        {
+            word: 'HOME',
+            gestures: ['FLAT_HAND_CHEEK'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'common'
+        },
+        {
+            word: 'HOUSE',
+            gestures: ['FLAT_HAND_OUTLINE'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'common'
+        },
+        {
+            word: 'CAR',
+            gestures: ['S_HANDS_DRIVE'],
+            duration: 1000,
+            handMovements: [{type: 'circular', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'common'
+        },
+        {
+            word: 'BOOK',
+            gestures: ['FLAT_HAND_OPEN'],
+            duration: 1000,
+            handMovements: [{type: 'open_close', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'common'
+        },
+        {
+            word: 'PHONE',
+            gestures: ['Y_HAND_EAR'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'common'
+        },
+        {
+            word: 'WATER',
+            gestures: ['W_TOUCH_CHIN'],
+            duration: 900,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'common'
+        },
+        {
+            word: 'FOOD',
+            gestures: ['FLAT_O_TO_MOUTH'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'common'
+        },
 
-        // Family
-        { word: 'MOTHER', gestures: ['FIVE', 'TOUCH_CHIN'], duration: 1000, handMovements: [{ type: 'tap', repetitions: 1, speed: 'medium' }], confidence: 0.9, category: 'family' },
-        { word: 'FATHER', gestures: ['FIVE', 'TOUCH_FOREHEAD'], duration: 1000, handMovements: [{ type: 'tap', repetitions: 1, speed: 'medium' }], confidence: 0.9, category: 'family' },
-        { word: 'FAMILY', gestures: ['F', 'CIRCULAR'], duration: 2000, handMovements: [{ type: 'circular', speed: 'slow' }], confidence: 0.8, category: 'family' },
+        // === Numbers ===
+        {
+            word: 'ONE',
+            gestures: ['INDEX_UP'],
+            duration: 800,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.9,
+            category: 'number'
+        },
+        {
+            word: 'TWO',
+            gestures: ['TWO_UP'],
+            duration: 800,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.9,
+            category: 'number'
+        },
+        {
+            word: 'THREE',
+            gestures: ['THREE_UP'],
+            duration: 800,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.9,
+            category: 'number'
+        },
+        {
+            word: 'FOUR',
+            gestures: ['FOUR_UP'],
+            duration: 800,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.9,
+            category: 'number'
+        },
+        {
+            word: 'FIVE',
+            gestures: ['FIVE_UP'],
+            duration: 800,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.9,
+            category: 'number'
+        },
 
-        // Actions
-        { word: 'EAT', gestures: ['PINCH', 'TO_MOUTH'], duration: 1000, handMovements: [{ type: 'linear', direction: 'up', speed: 'medium', repetitions: 2 }], confidence: 0.85, category: 'action' },
-        { word: 'DRINK', gestures: ['C_SHAPE', 'TO_MOUTH'], duration: 1200, handMovements: [{ type: 'linear', direction: 'up', speed: 'slow' }], confidence: 0.8, category: 'action' },
-        { word: 'SLEEP', gestures: ['FLAT_HAND', 'TO_CHEEK'], duration: 1500, handMovements: [{ type: 'static', speed: 'slow' }], confidence: 0.85, category: 'action' },
-        { word: 'HELP', gestures: ['FIST_ON_PALM', 'UP'], duration: 1200, handMovements: [{ type: 'linear', direction: 'up', speed: 'medium' }], confidence: 0.9, category: 'action' },
+        // === Colors ===
+        {
+            word: 'RED',
+            gestures: ['INDEX_CHIN'],
+            duration: 900,
+            handMovements: [{type: 'brush', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'color'
+        },
+        {
+            word: 'BLUE',
+            gestures: ['B_SHAKE'],
+            duration: 900,
+            handMovements: [{type: 'shake', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'color'
+        },
+        {
+            word: 'GREEN',
+            gestures: ['G_SHAKE'],
+            duration: 900,
+            handMovements: [{type: 'shake', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'color'
+        },
+        {
+            word: 'YELLOW',
+            gestures: ['Y_SHAKE'],
+            duration: 900,
+            handMovements: [{type: 'shake', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'color'
+        },
+        {
+            word: 'BLACK',
+            gestures: ['INDEX_FOREHEAD'],
+            duration: 900,
+            handMovements: [{type: 'linear', direction: 'right', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'color'
+        },
 
-        // Emotions
-        { word: 'HAPPY', gestures: ['FLAT_HAND', 'UP_CHEST'], duration: 1000, handMovements: [{ type: 'linear', direction: 'up', speed: 'fast', repetitions: 2 }], confidence: 0.85, category: 'emotion' },
-        { word: 'SAD', gestures: ['FIVE', 'DOWN_FACE'], duration: 1500, handMovements: [{ type: 'linear', direction: 'down', speed: 'slow' }], confidence: 0.8, category: 'emotion' },
-        { word: 'LOVE', gestures: ['CROSSED_ARMS'], duration: 2000, handMovements: [{ type: 'static', speed: 'slow' }], confidence: 0.9, category: 'emotion' },
+        // === Time Words ===
+        {
+            word: 'MORNING',
+            gestures: ['B_RISE'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'up', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'time'
+        },
+        {
+            word: 'NIGHT',
+            gestures: ['B_DOWN'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'time'
+        },
+        {
+            word: 'WEEK',
+            gestures: ['INDEX_SLIDE'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'right', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'time'
+        },
+        {
+            word: 'MONTH',
+            gestures: ['INDEX_DOWN_SLIDE'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'time'
+        },
+        {
+            word: 'YEAR',
+            gestures: ['S_CIRCLE'],
+            duration: 1200,
+            handMovements: [{type: 'circular', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'time'
+        },
 
-        // Time
-        { word: 'TODAY', gestures: ['NOW', 'DAY'], duration: 1800, handMovements: [{ type: 'linear', direction: 'down', speed: 'medium' }], confidence: 0.8, category: 'common' },
-        { word: 'TOMORROW', gestures: ['A', 'FORWARD'], duration: 1500, handMovements: [{ type: 'linear', direction: 'forward', speed: 'medium' }], confidence: 0.75, category: 'common' },
-        { word: 'YESTERDAY', gestures: ['A', 'BACKWARD'], duration: 1500, handMovements: [{ type: 'linear', direction: 'backward', speed: 'medium' }], confidence: 0.75, category: 'common' },
+        // === Emotions / States ===
+        {
+            word: 'SICK',
+            gestures: ['MIDDLE_TOUCH_FOREHEAD'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'emotion'
+        },
+        {
+            word: 'TIRED',
+            gestures: ['FLAT_HAND_CHEST_DOWN'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'emotion'
+        },
+        {
+            word: 'AFRAID',
+            gestures: ['S_OPEN'],
+            duration: 1200,
+            handMovements: [{type: 'open_close', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'emotion'
+        },
+        {
+            word: 'EXCITED',
+            gestures: ['MIDDLE_CHEST'],
+            duration: 1000,
+            handMovements: [{type: 'circular', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'emotion'
+        },
+        {
+            word: 'BORED',
+            gestures: ['INDEX_NOSE'],
+            duration: 1000,
+            handMovements: [{type: 'twist', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'emotion'
+        },
+
+        // === Question Words (extra) ===
+        {
+            word: 'WHO',
+            gestures: ['L_CHIN'],
+            duration: 1000,
+            handMovements: [{type: 'wiggle', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'question'
+        },
+        {
+            word: 'WHICH',
+            gestures: ['A_SHAKE'],
+            duration: 1000,
+            handMovements: [{type: 'shake', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'question'
+        },
+
+        // === Family (Additional) ===
+        {
+            word: 'BROTHER',
+            gestures: ['L_FOREHEAD_DOWN'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'family'
+        },
+        {
+            word: 'SISTER',
+            gestures: ['L_CHIN_DOWN'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'family'
+        },
+        {
+            word: 'BABY',
+            gestures: ['CRADLE_ARMS'],
+            duration: 1500,
+            handMovements: [{type: 'rock', speed: 'slow'}],
+            confidence: 0.9,
+            category: 'family'
+        },
+        {
+            word: 'CHILD',
+            gestures: ['FLAT_HAND_DOWN'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'family'
+        },
+        {
+            word: 'FRIEND',
+            gestures: ['HOOK_INDEX'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'relationship'
+        },
+
+        // === School / Learning ===
+        {
+            word: 'SCHOOL',
+            gestures: ['CLAP_FLAT'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'education'
+        },
+        {
+            word: 'TEACHER',
+            gestures: ['FLAT_HAND_FOREHEAD_OUT'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'forward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'education'
+        },
+        {
+            word: 'STUDENT',
+            gestures: ['GRAB_HEAD_DROP'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'education'
+        },
+        {
+            word: 'LEARN',
+            gestures: ['FLAT_HAND_TO_FOREHEAD'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'up', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'education'
+        },
+        {
+            word: 'READ',
+            gestures: ['V_EYES_DOWN'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'slow'}],
+            confidence: 0.85,
+            category: 'education'
+        },
+
+        // === Places ===
+        {
+            word: 'STORE',
+            gestures: ['FLICK_HANDS_OUT'],
+            duration: 1000,
+            handMovements: [{type: 'flick', repetitions: 2, speed: 'fast'}],
+            confidence: 0.85,
+            category: 'place'
+        },
+        {
+            word: 'BATHROOM',
+            gestures: ['T_SHAKE'],
+            duration: 900,
+            handMovements: [{type: 'shake', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'place'
+        },
+        {
+            word: 'HOSPITAL',
+            gestures: ['H_TAP_SHOULDER'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'place'
+        },
+        {
+            word: 'DOCTOR',
+            gestures: ['D_TAP_WRIST'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'place'
+        },
+        {
+            word: 'CHURCH',
+            gestures: ['C_TAP_FIST'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'place'
+        },
+
+        // === Modifiers / Prepositions ===
+        {
+            word: 'MORE',
+            gestures: ['FLAT_O_TOUCH'],
+            duration: 900,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'modifier'
+        },
+        {
+            word: 'AGAIN',
+            gestures: ['FLAT_BENT'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'modifier'
+        },
+        {
+            word: 'WITH',
+            gestures: ['A_JOIN'],
+            duration: 900,
+            handMovements: [{type: 'merge', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'modifier'
+        },
+        {
+            word: 'WITHOUT',
+            gestures: ['A_SPLIT'],
+            duration: 900,
+            handMovements: [{type: 'split', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'modifier'
+        },
+        {
+            word: 'NEAR',
+            gestures: ['FLAT_HAND_APPROACH'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'toward', speed: 'slow'}],
+            confidence: 0.85,
+            category: 'modifier'
+        },
+
+        // === Technology ===
+        {
+            word: 'COMPUTER',
+            gestures: ['C_CIRCULAR_HEAD'],
+            duration: 1200,
+            handMovements: [{type: 'circular', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'technology'
+        },
+        {
+            word: 'INTERNET',
+            gestures: ['MIDDLE_TOUCH'],
+            duration: 1200,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'technology'
+        },
+        {
+            word: 'EMAIL',
+            gestures: ['C_FLICK_FORWARD'],
+            duration: 1000,
+            handMovements: [{type: 'flick', repetitions: 1, speed: 'fast'}],
+            confidence: 0.85,
+            category: 'technology'
+        },
+        {
+            word: 'TEXT',
+            gestures: ['TYPE_THUMB'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 2, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'technology'
+        },
+        {
+            word: 'CAMERA',
+            gestures: ['C_FRAME_FACE'],
+            duration: 1000,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.85,
+            category: 'technology'
+        },
+
+        // === Common Adjectives ===
+        {
+            word: 'BIG',
+            gestures: ['SPREAD_ARMS'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'outward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'adjective'
+        },
+        {
+            word: 'SMALL',
+            gestures: ['FINGERS_CLOSE'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'inward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'adjective'
+        },
+        {
+            word: 'FAST',
+            gestures: ['F_HAND_QUICK'],
+            duration: 800,
+            handMovements: [{type: 'flick', repetitions: 2, speed: 'fast'}],
+            confidence: 0.85,
+            category: 'adjective'
+        },
+        {
+            word: 'SLOW',
+            gestures: ['FLAT_HAND_DRAG'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'forward', speed: 'slow'}],
+            confidence: 0.85,
+            category: 'adjective'
+        },
+        {
+            word: 'GOOD',
+            gestures: ['FLAT_HAND_CHIN_OUT'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'forward', speed: 'medium'}],
+            confidence: 0.85,
+            category: 'adjective'
+        },
+
+        // === Original 27 Words (unchanged) ===
+        {
+            word: 'HELLO',
+            gestures: ['OPEN_HAND', 'WAVE'],
+            duration: 1500,
+            handMovements: [{type: 'shake', speed: 'medium', repetitions: 2}],
+            confidence: 0.9,
+            category: 'greeting'
+        },
+        {
+            word: 'HI',
+            gestures: ['WAVE'],
+            duration: 1000,
+            handMovements: [{type: 'shake', speed: 'fast', repetitions: 3}],
+            confidence: 0.85,
+            category: 'greeting'
+        },
+        {
+            word: 'BYE',
+            gestures: ['OPEN_HAND', 'WAVE'],
+            duration: 2000,
+            handMovements: [{type: 'shake', speed: 'slow', repetitions: 4}],
+            confidence: 0.9,
+            category: 'greeting'
+        },
+        {
+            word: 'GOODBYE',
+            gestures: ['OPEN_HAND', 'WAVE', 'CLOSE'],
+            duration: 3000,
+            handMovements: [{type: 'linear', direction: 'right', speed: 'slow'}],
+            confidence: 0.8,
+            category: 'greeting'
+        },
+        {
+            word: 'YES',
+            gestures: ['FIST', 'NOD'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium', repetitions: 2}],
+            confidence: 0.9,
+            category: 'common'
+        },
+        {
+            word: 'NO',
+            gestures: ['INDEX_MIDDLE', 'SHAKE'],
+            duration: 1000,
+            handMovements: [{type: 'shake', speed: 'fast', repetitions: 3}],
+            confidence: 0.85,
+            category: 'common'
+        },
+        {
+            word: 'PLEASE',
+            gestures: ['OPEN_HAND', 'CIRCULAR'],
+            duration: 1500,
+            handMovements: [{type: 'circular', speed: 'medium'}],
+            confidence: 0.8,
+            category: 'common'
+        },
+        {
+            word: 'THANK_YOU',
+            gestures: ['OPEN_HAND', 'FORWARD'],
+            duration: 1800,
+            handMovements: [{type: 'linear', direction: 'forward', speed: 'medium'}],
+            confidence: 0.9,
+            category: 'common'
+        },
+        {
+            word: 'SORRY',
+            gestures: ['FIST', 'CIRCULAR'],
+            duration: 2000,
+            handMovements: [{type: 'circular', speed: 'slow'}],
+            confidence: 0.8,
+            category: 'emotion'
+        },
+        {
+            word: 'WHAT',
+            gestures: ['INDEX', 'SHAKE'],
+            duration: 800,
+            handMovements: [{type: 'shake', speed: 'fast', repetitions: 2}],
+            confidence: 0.85,
+            category: 'question'
+        },
+        {
+            word: 'WHERE',
+            gestures: ['INDEX', 'POINT'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'left', speed: 'medium'}, {
+                type: 'linear',
+                direction: 'right',
+                speed: 'medium'
+            }],
+            confidence: 0.8,
+            category: 'question'
+        },
+        {
+            word: 'WHEN',
+            gestures: ['INDEX', 'CIRCULAR'],
+            duration: 1200,
+            handMovements: [{type: 'circular', speed: 'medium'}],
+            confidence: 0.75,
+            category: 'question'
+        },
+        {
+            word: 'HOW',
+            gestures: ['FIST', 'ROLL'],
+            duration: 1500,
+            handMovements: [{type: 'circular', speed: 'slow'}],
+            confidence: 0.8,
+            category: 'question'
+        },
+        {
+            word: 'WHY',
+            gestures: ['Y_HAND', 'TOUCH_FOREHEAD'],
+            duration: 1200,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.85,
+            category: 'question'
+        },
+        {
+            word: 'MOTHER',
+            gestures: ['FIVE', 'TOUCH_CHIN'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.9,
+            category: 'family'
+        },
+        {
+            word: 'FATHER',
+            gestures: ['FIVE', 'TOUCH_FOREHEAD'],
+            duration: 1000,
+            handMovements: [{type: 'tap', repetitions: 1, speed: 'medium'}],
+            confidence: 0.9,
+            category: 'family'
+        },
+        {
+            word: 'FAMILY',
+            gestures: ['F', 'CIRCULAR'],
+            duration: 2000,
+            handMovements: [{type: 'circular', speed: 'slow'}],
+            confidence: 0.8,
+            category: 'family'
+        },
+        {
+            word: 'EAT',
+            gestures: ['PINCH', 'TO_MOUTH'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'up', speed: 'medium', repetitions: 2}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'DRINK',
+            gestures: ['C_SHAPE', 'TO_MOUTH'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'up', speed: 'slow'}],
+            confidence: 0.8,
+            category: 'action'
+        },
+        {
+            word: 'SLEEP',
+            gestures: ['FLAT_HAND', 'TO_CHEEK'],
+            duration: 1500,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.85,
+            category: 'action'
+        },
+        {
+            word: 'HELP',
+            gestures: ['FIST_ON_PALM', 'UP'],
+            duration: 1200,
+            handMovements: [{type: 'linear', direction: 'up', speed: 'medium'}],
+            confidence: 0.9,
+            category: 'action'
+        },
+        {
+            word: 'HAPPY',
+            gestures: ['FLAT_HAND', 'UP_CHEST'],
+            duration: 1000,
+            handMovements: [{type: 'linear', direction: 'up', speed: 'fast', repetitions: 2}],
+            confidence: 0.85,
+            category: 'emotion'
+        },
+        {
+            word: 'SAD',
+            gestures: ['FIVE', 'DOWN_FACE'],
+            duration: 1500,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'slow'}],
+            confidence: 0.8,
+            category: 'emotion'
+        },
+        {
+            word: 'LOVE',
+            gestures: ['CROSSED_ARMS'],
+            duration: 2000,
+            handMovements: [{type: 'static', speed: 'slow'}],
+            confidence: 0.9,
+            category: 'emotion'
+        },
+        {
+            word: 'TODAY',
+            gestures: ['NOW', 'DAY'],
+            duration: 1800,
+            handMovements: [{type: 'linear', direction: 'down', speed: 'medium'}],
+            confidence: 0.8,
+            category: 'common'
+        },
+        {
+            word: 'TOMORROW',
+            gestures: ['A', 'FORWARD'],
+            duration: 1500,
+            handMovements: [{type: 'linear', direction: 'forward', speed: 'medium'}],
+            confidence: 0.75,
+            category: 'common'
+        },
+        {
+            word: 'YESTERDAY',
+            gestures: ['A', 'BACKWARD'],
+            duration: 1500,
+            handMovements: [{type: 'linear', direction: 'backward', speed: 'medium'}],
+            confidence: 0.75,
+            category: 'common'
+        },
     ];
 
     private gestureSequence: GestureSequence = {
@@ -148,7 +965,7 @@ export class WordLevelRecognizer {
             );
 
             if (validRecent.length < 3) {
-                return { type: 'static', speed: 'slow' };
+                return {type: 'static', speed: 'slow'};
             }
 
             // Extract wrist positions (index 0) with safety checks
@@ -167,22 +984,22 @@ export class WordLevelRecognizer {
 
             // Need at least 3 valid wrist positions
             if (wristPositions.length < 3) {
-                return { type: 'static', speed: 'slow' };
+                return {type: 'static', speed: 'slow'};
             }
 
             // Calculate movement vectors safely
-            const first = wristPositions[0];
-            const last = wristPositions[wristPositions.length - 1];
+            const first : any = wristPositions[0];
+            const last: any = wristPositions[wristPositions.length - 1];
 
             const dx = last.x - first.x;
             const dy = last.y - first.y;
             const dz = last.z - first.z;
 
-            const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
             // Static if very little movement
             if (distance < 0.02) {
-                return { type: 'static', speed: 'slow' };
+                return {type: 'static', speed: 'slow'};
             }
 
             // Determine movement type and direction
@@ -214,7 +1031,7 @@ export class WordLevelRecognizer {
 
             // Check for circular motion (simplified)
             if (wristPositions.length >= 3) {
-                const midPoint = wristPositions[Math.floor(wristPositions.length / 2)];
+                const midPoint : any = wristPositions[Math.floor(wristPositions.length / 2)];
                 const area = Math.abs(
                     (first.x * (midPoint.y - last.y) +
                         midPoint.x * (last.y - first.y) +
@@ -234,7 +1051,7 @@ export class WordLevelRecognizer {
 
         } catch (error) {
             console.warn('Error in detectMovementPattern:', error);
-            return { type: 'static', speed: 'slow' };
+            return {type: 'static', speed: 'slow'};
         }
     }
 
@@ -457,7 +1274,7 @@ export class WordLevelRecognizer {
                 try {
                     const score = this.calculateWordScore(pattern);
                     if (score > 0.3) {
-                        suggestions.push({ word: pattern.word, score });
+                        suggestions.push({word: pattern.word, score});
                     }
                 } catch (error) {
                     console.warn(`Error getting suggestion for ${pattern.word}:`, error);
