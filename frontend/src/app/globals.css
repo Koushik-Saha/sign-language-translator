@@ -62,3 +62,171 @@ body {
 @media (max-width: 768px) {
   button { min-height: 48px; min-width: 48px; }
 }
+
+/* Add these styles to your globals.css file */
+
+/* Large Camera View Styles */
+.camera-container-large {
+  @apply fixed inset-0 z-50 bg-black;
+}
+
+.camera-container-windowed {
+  @apply relative w-full h-full bg-black rounded-xl overflow-hidden;
+}
+
+.camera-video-large {
+  @apply w-full h-screen object-cover;
+  transform: scaleX(-1); /* Mirror effect for natural interaction */
+}
+
+.camera-video-windowed {
+  @apply w-full h-full object-cover;
+  transform: scaleX(-1); /* Mirror effect for natural interaction */
+  min-height: 600px;
+}
+
+.camera-overlay {
+  @apply absolute inset-0 pointer-events-none;
+  z-index: 20;
+}
+
+.camera-top-bar {
+  @apply absolute top-0 left-0 right-0 flex justify-between items-center p-6;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+  pointer-events: auto;
+}
+
+.mode-badge {
+  @apply bg-black/60 backdrop-blur-sm text-white font-bold px-4 py-2 rounded-lg border border-white/20;
+}
+
+.exit-fullscreen {
+  @apply bg-black/60 backdrop-blur-sm hover:bg-black/80 text-white px-4 py-2 rounded-lg font-bold transition-all duration-200 border border-white/20 hover:border-white/40;
+}
+
+.gesture-indicators {
+  @apply absolute top-24 left-6 flex gap-2;
+}
+
+.gesture-dot {
+  @apply w-4 h-4 rounded-full border-2 border-white bg-white/40;
+}
+
+.gesture-dot.active {
+  @apply bg-green-400 animate-pulse;
+}
+
+.word-formation {
+  @apply absolute top-6 right-6 bg-black/60 backdrop-blur-sm rounded-lg p-4 border border-white/20 max-w-xs;
+}
+
+.word-formation h4 {
+  @apply text-white font-bold mb-2;
+}
+
+.word-letters {
+  @apply flex flex-wrap gap-1 mb-2;
+}
+
+.letter-pill {
+  @apply bg-blue-500/50 text-white px-2 py-1 rounded text-sm;
+}
+
+.current-word {
+  @apply text-white text-lg font-bold;
+}
+
+.detection-panel-large {
+  @apply absolute bottom-0 left-0 right-0 p-6;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  pointer-events: auto;
+}
+
+.detection-content {
+  @apply bg-black/70 backdrop-blur-md rounded-2xl border border-white/20 p-6;
+}
+
+.detection-card {
+  @apply bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20;
+}
+
+.detection-card h3 {
+  @apply text-white font-bold text-lg mb-3 flex items-center gap-2;
+}
+
+.detection-card .value {
+  @apply text-white text-2xl font-bold mb-2 text-center;
+}
+
+.detection-card .description {
+  @apply text-white/80 text-sm text-center;
+}
+
+.confidence-bar {
+  @apply bg-white/20 rounded-full h-3 mb-2 overflow-hidden;
+}
+
+.confidence-fill {
+  @apply h-full transition-all duration-300;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .camera-video-large,
+  .camera-video-windowed {
+    min-height: 400px;
+  }
+
+  .detection-content {
+    @apply p-4;
+  }
+
+  .camera-top-bar {
+    @apply p-4;
+  }
+
+  .mode-badge {
+    @apply text-sm px-3 py-1;
+  }
+
+  .detection-card {
+    @apply p-3;
+  }
+
+  .detection-card .value {
+    @apply text-xl;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .camera-overlay {
+    border: 2px solid #ffffff !important;
+  }
+
+  .mode-badge,
+  .exit-fullscreen,
+  .detection-card {
+    border-color: #ffffff !important;
+    background-color: rgba(0, 0, 0, 0.9) !important;
+  }
+
+  .gesture-dot {
+    border-color: #ffffff !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .gesture-dot.active {
+    animation: none !important;
+  }
+
+  .confidence-fill {
+    transition: none !important;
+  }
+
+  .exit-fullscreen {
+    transition: none !important;
+  }
+}
