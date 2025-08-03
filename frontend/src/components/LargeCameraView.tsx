@@ -1,6 +1,6 @@
 // frontend/src/components/LargeCameraView.tsx
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import {useTranslation} from "@/context/TranslationContext";
+import { useTranslation } from "@/context/TranslationContext";
 
 interface LargeCameraViewProps {
     isFullscreen: boolean;
@@ -26,17 +26,20 @@ export const LargeCameraView: React.FC<LargeCameraViewProps> = ({
     const [isLoading, setIsLoading] = useState(true);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [gestureHistory, setGestureHistory] = useState<string[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     const { addTranslation } = useTranslation();
 
-    // Initialize camera
+    // Initialize camera with high resolution
     const initializeCamera = useCallback(async () => {
         try {
             setIsLoading(true);
+            setError(null);
+
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
+                    width: { ideal: isFullscreen ? 1920 : 1280 },
+                    height: { ideal: isFullscreen ? 1080 : 720 },
                     facingMode: 'user',
                     frameRate: { ideal: 30 }
                 },
@@ -50,9 +53,10 @@ export const LargeCameraView: React.FC<LargeCameraViewProps> = ({
             setIsLoading(false);
         } catch (error) {
             console.error('Error accessing camera:', error);
+            setError('Failed to access camera. Please check permissions.');
             setIsLoading(false);
         }
-    }, []);
+    }, [isFullscreen]);
 
     // Clean up camera
     const cleanupCamera = useCallback(() => {
@@ -61,7 +65,7 @@ export const LargeCameraView: React.FC<LargeCameraViewProps> = ({
         }
     }, [stream]);
 
-    // Initialize camera on mount
+    // Initialize camera on mount and fullscreen changes
     useEffect(() => {
         initializeCamera();
         return cleanupCamera;
@@ -95,6 +99,125 @@ export const LargeCameraView: React.FC<LargeCameraViewProps> = ({
         };
     }, [isFullscreen, onToggleFullscreen]);
 
+    return (
+        <div className={`relative ${isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'w-full h-full'}`}>
+            <CameraDisplay
+                videoRef={videoRef}
+                canvasRef={canvasRef}
+                isLoading={isLoading}
+                error={error}
+                isFullscreen={isFullscreen}
+                onRetry={initializeCamera}
+            />
+
+            <CameraOverlay
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={onToggleFullscreen}
+                mode={mode}
+                gestureHistory={gestureHistory}
+                currentGesture={currentGesture}
+                confidence={confidence}
+                currentWord={currentWord}
+                wordSequence={wordSequence}
+                stream={stream}
+            />
+        </div>
+    );
+};
+
+// Camera Display Component
+interface CameraDisplayProps {
+    videoRef: React.RefObject<HTMLVideoElement>;
+    canvasRef: React.RefObject<HTMLCanvasElement>;
+    isLoading: boolean;
+    error: string | null;
+    isFullscreen: boolean;
+    onRetry: () => void;
+}
+
+const CameraDisplay: React.FC<CameraDisplayProps> = ({
+                                                         videoRef,
+                                                         canvasRef,
+                                                         isLoading,
+                                                         error,
+                                                         isFullscreen,
+                                                         onRetry
+                                                     }) => {
+    if (isLoading) {
+        return (
+            <div className="absolute inset-0 bg-black flex items-center justify-center z-50">
+                <div className="text-white text-center">
+                    <div className="animate-spin w-16 h-16 border-4 border-white border-t-transparent rounded-full mx-auto mb-6"></div>
+                    <p className="text-2xl font-semibold">Initializing Camera...</p>
+                    <p className="text-lg text-gray-300 mt-2">Setting up high-resolution capture</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="absolute inset-0 bg-red-900 flex items-center justify-center z-50">
+                <div className="text-white text-center max-w-md p-8">
+                    <div className="text-6xl mb-6">⚠️</div>
+                    <p className="text-xl font-semibold mb-4">{error}</p>
+                    <button
+                        onClick={onRetry}
+                        className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-lg font-bold text-lg transition-colors"
+                    >
+                        🔄 Retry Camera Access
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            {/* Main Video Element */}
+            <video
+                ref={videoRef}
+                className={`w-full ${isFullscreen ? 'h-screen' : 'h-[600px]'} object-cover transform scale-x-[-1] bg-black`}
+                autoPlay
+                playsInline
+                muted
+                onLoadedData={() => console.log('Video loaded')}
+            />
+
+            {/* Hand Landmarks Canvas Overlay */}
+            <canvas
+                ref={canvasRef}
+                className={`absolute top-0 left-0 w-full ${isFullscreen ? 'h-screen' : 'h-[600px]'} pointer-events-none transform scale-x-[-1]`}
+                style={{ zIndex: 10 }}
+            />
+        </>
+    );
+};
+
+// Camera Overlay Component
+interface CameraOverlayProps {
+    isFullscreen: boolean;
+    onToggleFullscreen: () => void;
+    mode: string;
+    gestureHistory: string[];
+    currentGesture: string;
+    confidence: number;
+    currentWord: string;
+    wordSequence: string[];
+    stream: MediaStream | null;
+}
+
+const CameraOverlay: React.FC<CameraOverlayProps> = ({
+                                                         isFullscreen,
+                                                         onToggleFullscreen,
+                                                         mode,
+                                                         gestureHistory,
+                                                         currentGesture,
+                                                         confidence,
+                                                         currentWord,
+                                                         wordSequence,
+                                                         stream
+                                                     }) => {
     const getModeDisplay = () => {
         switch (mode) {
             case 'letter': return '🔤 Letter Recognition';
@@ -105,156 +228,61 @@ export const LargeCameraView: React.FC<LargeCameraViewProps> = ({
     };
 
     const getConfidenceColor = () => {
-        if (confidence >= 0.8) return '#10b981';
-        if (confidence >= 0.6) return '#f59e0b';
-        return '#ef4444';
+        if (confidence >= 0.8) return 'bg-green-500';
+        if (confidence >= 0.6) return 'bg-yellow-500';
+        return 'bg-red-500';
     };
 
-    const containerClass = isFullscreen ? 'camera-container-large' : 'camera-container-windowed';
-    const videoClass = isFullscreen ? 'camera-video-large' : 'camera-video-windowed';
-
     return (
-        <div className={containerClass}>
-            {/* Loading Overlay */}
-            {isLoading && (
-                <div className="absolute inset-0 bg-black flex items-center justify-center z-50">
-                    <div className="text-white text-center">
-                        <div className="animate-spin w-12 h-12 border-4 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
-                        <p className="text-lg">Initializing Camera...</p>
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 20 }}>
+            {/* Top Control Bar */}
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-6">
+                <div className="flex justify-between items-center pointer-events-auto">
+                    <div className="bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
+                        <span className="text-white font-bold text-lg">{getModeDisplay()}</span>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={onToggleFullscreen}
+                            className="bg-black/60 backdrop-blur-sm hover:bg-black/80 text-white px-6 py-3 rounded-lg font-bold transition-all duration-200 border border-white/20 hover:border-white/40"
+                            title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
+                        >
+                            {isFullscreen ? '🗗 Exit' : '⛶ Fullscreen'}
+                        </button>
                     </div>
                 </div>
-            )}
+            </div>
 
-            {/* Video Element */}
-            <video
-                ref={videoRef}
-                className={videoClass}
-                autoPlay
-                playsInline
-                muted
-                onLoadedData={() => setIsLoading(false)}
-            />
-
-            {/* Hand Landmarks Canvas */}
-            <canvas
-                ref={canvasRef}
-                className="hand-landmarks"
-                style={{
-                    width: '100%',
-                    height: isFullscreen ? 'calc(100vh - 120px)' : '100%'
-                }}
-            />
-
-            {/* Camera Overlay */}
-            <div className="camera-overlay">
-                {/* Top Bar */}
-                <div className="camera-top-bar">
-                    <div className="mode-badge">
-                        {getModeDisplay()}
-                    </div>
-
-                    <div className="flex gap-3">
-                        {!isFullscreen && (
-                            <button
-                                onClick={onToggleFullscreen}
-                                className="exit-fullscreen"
-                                title="Enter Fullscreen"
-                            >
-                                ⛶
-                            </button>
-                        )}
-                        {isFullscreen && (
-                            <button
-                                onClick={onToggleFullscreen}
-                                className="exit-fullscreen"
-                                title="Exit Fullscreen (ESC)"
-                            >
-                                ✕
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Gesture Indicators */}
-                <div className="gesture-indicators">
+            {/* Gesture History Indicators */}
+            <div className="absolute top-24 left-6">
+                <div className="flex gap-2">
                     {gestureHistory.map((gesture, index) => (
                         <div
                             key={index}
-                            className={`gesture-dot ${index === gestureHistory.length - 1 ? 'active' : ''}`}
+                            className={`w-4 h-4 rounded-full border-2 border-white ${
+                                index === gestureHistory.length - 1
+                                    ? 'bg-green-400 animate-pulse'
+                                    : 'bg-white/60'
+                            }`}
                             title={gesture}
                         />
                     ))}
                 </div>
+            </div>
 
-                {/* Word Formation Display */}
-                {mode !== 'letter' && (
-                    <div className="word-formation">
-                        <h4>Word Formation</h4>
-                        <div className="word-letters">
-                            {wordSequence.map((letter, index) => (
-                                <span key={index} className="letter-pill">
-                                    {letter}
-                                </span>
-                            ))}
-                        </div>
-                        {currentWord && (
-                            <p className="current-word">{currentWord}</p>
-                        )}
-                    </div>
-                )}
-
-                {/* Bottom Detection Panel */}
-                <div className="detection-panel-large">
-                    <div className="detection-content">
-                        {/* Current Gesture */}
-                        <div className="detection-card">
-                            <h3>👋 Current Gesture</h3>
-                            <div className="value">
-                                {currentGesture || 'None'}
-                            </div>
-                            <div className="confidence-bar">
-                                <div
-                                    className="confidence-fill"
-                                    style={{
-                                        width: `${confidence * 100}%`,
-                                        background: getConfidenceColor()
-                                    }}
-                                />
-                            </div>
-                            <p className="description">
-                                Confidence: {(confidence * 100).toFixed(1)}%
-                            </p>
-                        </div>
-
-                        {/* Word Progress */}
-                        <div className="detection-card">
-                            <h3>📝 {mode === 'letter' ? 'Letters' : 'Words'}</h3>
-                            <div className="value">
-                                {mode === 'letter'
-                                    ? wordSequence.join('')
-                                    : currentWord || 'Building...'
-                                }
-                            </div>
-                            <p className="description">
-                                {mode === 'letter'
-                                    ? `${wordSequence.length} letters detected`
-                                    : `Sequence: ${wordSequence.length} gestures`
-                                }
-                            </p>
-                        </div>
-
-                        {/* Performance Stats */}
-                        <div className="detection-card">
-                            <h3>📊 Performance</h3>
-                            <div className="value">
-                                {stream?.getVideoTracks()[0]?.getSettings()?.frameRate || 30} FPS
-                            </div>
-                            <p className="description">
-                                {stream?.getVideoTracks()[0]?.getSettings()?.width}x
-                                {stream?.getVideoTracks()[0]?.getSettings()?.height} resolution
-                            </p>
-                        </div>
-                    </div>
+            {/* Current Detection Panel */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6">
+                <div className="pointer-events-auto">
+                    <DetectionPanel
+                        currentGesture={currentGesture}
+                        confidence={confidence}
+                        currentWord={currentWord}
+                        wordSequence={wordSequence}
+                        mode={mode}
+                        stream={stream}
+                        confidenceColorClass={getConfidenceColor()}
+                    />
                 </div>
             </div>
 
