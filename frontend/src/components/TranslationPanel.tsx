@@ -60,7 +60,7 @@ export default function TranslationPanel() {
                             {lastTranslation.translation}
                         </div>
                         <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>From: "{lastTranslation.original}"</span>
+                            <span>From: &quot;{lastTranslation.original}&quot;</span>
                             <span>Confidence: {(lastTranslation.confidence * 100).toFixed(1)}%</span>
                         </div>
                         <div className="flex space-x-2">
@@ -109,7 +109,7 @@ export default function TranslationPanel() {
                                     </div>
                                 </div>
                                 <div className="text-sm text-gray-600 mt-1">
-                                    From: "{item.original}" ({(item.confidence * 100).toFixed(1)}%)
+                                    From: &quot;{item.original}&quot; ({(item.confidence * 100).toFixed(1)}%)
                                 </div>
                                 <div className="flex space-x-2 mt-2">
                                     <button

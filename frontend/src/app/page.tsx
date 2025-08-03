@@ -278,15 +278,16 @@ export default function Home() {
                                     Get immediate assistance with sign language translation
                                 </div>
 
-                                <button
+                                <a
+                                    href="/text-to-sign"
                                     className="flex items-center gap-3 bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 text-white px-8 py-5 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 min-w-60 justify-center shadow-lg"
-                                    aria-describedby="learning-mode-desc"
+                                    aria-describedby="text-to-sign-desc"
                                 >
-                                    <span className="text-2xl" role="img" aria-label="Learning">📚</span>
-                                    Learning Mode
-                                </button>
-                                <div id="learning-mode-desc" className="sr-only">
-                                    Switch to interactive learning mode with tutorials
+                                    <span className="text-2xl" role="img" aria-label="Avatar">🤖</span>
+                                    Text-to-Sign Avatar
+                                </a>
+                                <div id="text-to-sign-desc" className="sr-only">
+                                    Convert text to sign language using 3D avatar
                                 </div>
 
                                 <button
