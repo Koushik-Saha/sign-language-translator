@@ -6,6 +6,7 @@ import { useHandDetection } from '@/hooks/useHandDetection';
 import { useTranslation } from '@/context/TranslationContext';
 import { useEnhancedWordFormation } from '@/hooks/useEnhancedWordFormation';
 import { useWordRecognition } from '@/hooks/useWordRecognition';
+import LargeCameraView from "@/components/LargeCameraView";
 
 type RecognitionMode = 'letter' | 'word' | 'hybrid';
 
@@ -19,6 +20,9 @@ export default function CameraCapture() {
     const [isDetectionActive, setIsDetectionActive] = useState(false);
     const [announceMessage, setAnnounceMessage] = useState('');
     const [recognitionMode, setRecognitionMode] = useState<RecognitionMode>('hybrid');
+
+    // NEW: Large camera view state
+    const [showLargeCameraView, setShowLargeCameraView] = useState(false);
 
     const { initializeHandDetection, currentGesture } = useHandDetection();
     const {
@@ -185,6 +189,30 @@ export default function CameraCapture() {
         );
     }
 
+    // NEW: Toggle large camera view
+    const toggleLargeCameraView = () => {
+        setShowLargeCameraView(!showLargeCameraView);
+        announceToScreenReader(showLargeCameraView ? "Exited large camera view" : "Entered large camera view");
+    };
+
+    // NEW: Render LargeCameraView if active
+    if (showLargeCameraView) {
+        return (
+            <LargeCameraView
+                isFullscreen={showLargeCameraView}
+                onToggleFullscreen={toggleLargeCameraView}
+                currentGesture={currentGesture?.letter || ''}
+                confidence={currentGesture?.confidence || 0}
+                wordSequence={sequenceStatus.length > 0 ?
+                    Array.from({length: sequenceStatus.length}, (_, i) => currentGesture?.letter || '') :
+                    currentWord.split('')
+                }
+                currentWord={currentWordResult?.word || currentWord}
+                mode={recognitionMode}
+            />
+        );
+    }
+
     return (
         <div className="w-full max-w-full space-y-6">
             {/* Live region for screen reader announcements */}
@@ -229,7 +257,7 @@ export default function CameraCapture() {
 
             {/* Main video container */}
             <div className="mb-6">
-                <div className="relative bg-black rounded-xl overflow-hidden aspect-video w-full max-w-full">
+                <div className="relative bg-black rounded-xl overflow-hidden aspect-video w-full max-w-full h-102">
                     {isLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-20">
                             <div className="text-center">
@@ -270,13 +298,13 @@ export default function CameraCapture() {
                         ref={canvasRef}
                         width={640}
                         height={480}
-                        className={`w-full h-full object-cover ${!isDetectionActive ? 'hidden' : ''}`}
+                        className={`ml-0.5 w-full h-full object-cover ${!isDetectionActive ? 'hidden' : ''}`}
                         style={{ transform: 'scaleX(-1)' }}
                         aria-label="Hand detection visualization"
                     />
 
                     {/* Status overlay */}
-                    <div className="absolute top-4 left-4 bg-black/80 text-white px-3 py-2 rounded-lg">
+                    <div className="absolute top-4 right-4 bg-black/80 text-white px-3 py-2 rounded-lg">
                         <div className="flex items-center gap-2 text-sm">
                             <div className={`w-2 h-2 rounded-full ${
                                 isDetectionActive ? 'bg-red-500 animate-pulse' :

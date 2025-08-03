@@ -1,6 +1,7 @@
 // frontend/src/components/LargeCameraView.tsx
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useTranslation } from "@/context/TranslationContext";
+import DetectionPanel from "@/components/DetectionPanel";
 
 interface LargeCameraViewProps {
     isFullscreen: boolean;
@@ -21,8 +22,8 @@ export const LargeCameraView: React.FC<LargeCameraViewProps> = ({
                                                                     currentWord,
                                                                     mode
                                                                 }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const videoRef = useRef<HTMLVideoElement | any>(null);
+    const canvasRef = useRef<HTMLCanvasElement | any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [gestureHistory, setGestureHistory] = useState<string[]>([]);
@@ -127,8 +128,8 @@ export const LargeCameraView: React.FC<LargeCameraViewProps> = ({
 
 // Camera Display Component
 interface CameraDisplayProps {
-    videoRef: React.RefObject<HTMLVideoElement>;
-    canvasRef: React.RefObject<HTMLCanvasElement>;
+    videoRef: React.RefObject<HTMLVideoElement> | null;
+    canvasRef: React.RefObject<HTMLCanvasElement> | null;
     isLoading: boolean;
     error: string | null;
     isFullscreen: boolean;
@@ -238,7 +239,7 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({
             {/* Top Control Bar */}
             <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-6">
                 <div className="flex justify-between items-center pointer-events-auto">
-                    <div className="bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
+                    <div className="text-right bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
                         <span className="text-white font-bold text-lg">{getModeDisplay()}</span>
                     </div>
 
