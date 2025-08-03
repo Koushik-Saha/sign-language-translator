@@ -1,4 +1,3 @@
-// frontend/src/services/wordLevelRecognition.ts
 export interface WordGesturePattern {
     word: string;
     gestures: string[];
@@ -95,14 +94,24 @@ export class WordLevelRecognizer {
             this.clearSequence();
         }
 
+        // Validate landmarks before adding
+        if (!landmarks || !Array.isArray(landmarks) || landmarks.length === 0) {
+            console.warn('Invalid landmarks provided to addGestureToSequence');
+            return;
+        }
+
         this.gestureSequence.gestures.push(gesture);
         this.gestureSequence.timestamps.push(timestamp);
         this.gestureSequence.landmarks.push(landmarks);
 
-        // Detect movement pattern
-        const movement = this.detectMovementPattern(landmarks, this.gestureSequence.landmarks);
-        if (movement) {
-            this.gestureSequence.movements.push(movement);
+        // Detect movement pattern with safety checks
+        try {
+            const movement = this.detectMovementPattern(landmarks, this.gestureSequence.landmarks);
+            if (movement) {
+                this.gestureSequence.movements.push(movement);
+            }
+        } catch (error) {
+            console.warn('Error detecting movement pattern:', error);
         }
 
         // Limit sequence length
@@ -110,138 +119,235 @@ export class WordLevelRecognizer {
             this.gestureSequence.gestures.shift();
             this.gestureSequence.timestamps.shift();
             this.gestureSequence.landmarks.shift();
-            this.gestureSequence.movements.shift();
+            if (this.gestureSequence.movements.length > 0) {
+                this.gestureSequence.movements.shift();
+            }
         }
 
         this.lastGestureTime = timestamp;
     }
 
-    // Detect movement patterns from landmark history
+    // FIXED: Detect movement patterns from landmark history with proper null checks
     private detectMovementPattern(currentLandmarks: any[], landmarkHistory: any[][]): MovementPattern | null {
-        if (landmarkHistory.length < 3) return null;
+        try {
+            // Enhanced validation
+            if (!landmarkHistory || landmarkHistory.length < 3) {
+                return null;
+            }
 
-        const recent = landmarkHistory.slice(-3);
-        const wrist = recent.map(landmarks => landmarks[0]);
+            // Get recent landmarks with validation
+            const recent = landmarkHistory.slice(-3);
 
-        // Calculate movement vectors
-        const dx = wrist[2].x - wrist[0].x;
-        const dy = wrist[2].y - wrist[0].y;
-        const dz = (wrist[2].z || 0) - (wrist[0].z || 0);
+            // Validate each landmark array
+            const validRecent = recent.filter(landmarks =>
+                landmarks &&
+                Array.isArray(landmarks) &&
+                landmarks.length > 0 &&
+                landmarks[0] &&
+                typeof landmarks[0] === 'object'
+            );
 
-        const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            if (validRecent.length < 3) {
+                return { type: 'static', speed: 'slow' };
+            }
 
-        if (distance < 0.02) {
+            // Extract wrist positions (index 0) with safety checks
+            const wristPositions = validRecent.map(landmarks => {
+                const wrist = landmarks[0];
+                // Ensure wrist has required properties
+                if (!wrist || typeof wrist.x !== 'number' || typeof wrist.y !== 'number') {
+                    return null;
+                }
+                return {
+                    x: wrist.x,
+                    y: wrist.y,
+                    z: typeof wrist.z === 'number' ? wrist.z : 0
+                };
+            }).filter(Boolean); // Remove null entries
+
+            // Need at least 3 valid wrist positions
+            if (wristPositions.length < 3) {
+                return { type: 'static', speed: 'slow' };
+            }
+
+            // Calculate movement vectors safely
+            const first = wristPositions[0];
+            const last = wristPositions[wristPositions.length - 1];
+
+            const dx = last.x - first.x;
+            const dy = last.y - first.y;
+            const dz = last.z - first.z;
+
+            const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+            // Static if very little movement
+            if (distance < 0.02) {
+                return { type: 'static', speed: 'slow' };
+            }
+
+            // Determine movement type and direction
+            const absX = Math.abs(dx);
+            const absY = Math.abs(dy);
+            const absZ = Math.abs(dz);
+
+            let direction: string;
+            let type: 'linear' | 'circular' = 'linear';
+
+            // Determine primary direction
+            if (absX > absY && absX > absZ) {
+                direction = dx > 0 ? 'right' : 'left';
+            } else if (absY > absZ) {
+                direction = dy > 0 ? 'down' : 'up';
+            } else {
+                direction = dz > 0 ? 'forward' : 'backward';
+            }
+
+            // Determine speed based on distance
+            let speed: 'slow' | 'medium' | 'fast';
+            if (distance > 0.1) {
+                speed = 'fast';
+            } else if (distance > 0.05) {
+                speed = 'medium';
+            } else {
+                speed = 'slow';
+            }
+
+            // Check for circular motion (simplified)
+            if (wristPositions.length >= 3) {
+                const midPoint = wristPositions[Math.floor(wristPositions.length / 2)];
+                const area = Math.abs(
+                    (first.x * (midPoint.y - last.y) +
+                        midPoint.x * (last.y - first.y) +
+                        last.x * (first.y - midPoint.y)) / 2
+                );
+
+                if (area > 0.01) {
+                    type = 'circular';
+                }
+            }
+
+            return {
+                type,
+                direction: direction as any,
+                speed
+            };
+
+        } catch (error) {
+            console.warn('Error in detectMovementPattern:', error);
             return { type: 'static', speed: 'slow' };
         }
-
-        // Determine movement type and direction
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > Math.abs(dz)) {
-            return {
-                type: 'linear',
-                direction: dx > 0 ? 'right' : 'left',
-                speed: distance > 0.1 ? 'fast' : distance > 0.05 ? 'medium' : 'slow'
-            };
-        } else if (Math.abs(dy) > Math.abs(dz)) {
-            return {
-                type: 'linear',
-                direction: dy > 0 ? 'down' : 'up',
-                speed: distance > 0.1 ? 'fast' : distance > 0.05 ? 'medium' : 'slow'
-            };
-        } else {
-            return {
-                type: 'linear',
-                direction: dz > 0 ? 'forward' : 'backward',
-                speed: distance > 0.1 ? 'fast' : distance > 0.05 ? 'medium' : 'slow'
-            };
-        }
     }
 
-    // Recognize word from current gesture sequence
+    // FIXED: Recognize word from current gesture sequence with better error handling
     recognizeWord(): WordRecognitionResult | null {
-        if (this.gestureSequence.gestures.length === 0) {
+        try {
+            if (this.gestureSequence.gestures.length === 0) {
+                return null;
+            }
+
+            let bestMatch: WordRecognitionResult | null = null;
+            let bestScore = 0;
+
+            for (const pattern of this.wordVocabulary) {
+                try {
+                    const score = this.calculateWordScore(pattern);
+
+                    if (score > bestScore && score > 0.5) {
+                        bestScore = score;
+                        bestMatch = {
+                            word: pattern.word,
+                            confidence: score,
+                            category: pattern.category,
+                            description: this.getWordDescription(pattern),
+                            gestures: pattern.gestures,
+                            quality: this.getQualityFromScore(score),
+                            completeness: this.calculateCompleteness(pattern)
+                        };
+                    }
+                } catch (error) {
+                    console.warn(`Error calculating score for pattern ${pattern.word}:`, error);
+                    continue;
+                }
+            }
+
+            // Add to recognition history
+            if (bestMatch && bestMatch.confidence > 0.6) {
+                this.recognitionHistory.push(bestMatch);
+                if (this.recognitionHistory.length > 5) {
+                    this.recognitionHistory.shift();
+                }
+            }
+
+            return bestMatch;
+        } catch (error) {
+            console.error('Error in recognizeWord:', error);
             return null;
         }
-
-        let bestMatch: WordRecognitionResult | null = null;
-        let bestScore = 0;
-
-        for (const pattern of this.wordVocabulary) {
-            const score = this.calculateWordScore(pattern);
-
-            if (score > bestScore && score > 0.5) {
-                bestScore = score;
-                bestMatch = {
-                    word: pattern.word,
-                    confidence: score,
-                    category: pattern.category,
-                    description: this.getWordDescription(pattern),
-                    gestures: pattern.gestures,
-                    quality: this.getQualityFromScore(score),
-                    completeness: this.calculateCompleteness(pattern)
-                };
-            }
-        }
-
-        // Add to recognition history
-        if (bestMatch && bestMatch.confidence > 0.6) {
-            this.recognitionHistory.push(bestMatch);
-            if (this.recognitionHistory.length > 5) {
-                this.recognitionHistory.shift();
-            }
-        }
-
-        return bestMatch;
     }
 
-    // Calculate word matching score
+    // Calculate word matching score with error handling
     private calculateWordScore(pattern: WordGesturePattern): number {
-        let score = 0;
-        const sequence = this.gestureSequence;
+        try {
+            let score = 0;
+            const sequence = this.gestureSequence;
 
-        // Gesture sequence matching (40% of score)
-        const gestureScore = this.matchGestureSequence(pattern.gestures, sequence.gestures);
-        score += gestureScore * 0.4;
+            // Gesture sequence matching (40% of score)
+            const gestureScore = this.matchGestureSequence(pattern.gestures, sequence.gestures);
+            score += gestureScore * 0.4;
 
-        // Movement pattern matching (30% of score)
-        const movementScore = this.matchMovementPatterns(pattern.handMovements || [], sequence.movements);
-        score += movementScore * 0.3;
+            // Movement pattern matching (30% of score)
+            const movementScore = this.matchMovementPatterns(pattern.handMovements || [], sequence.movements);
+            score += movementScore * 0.3;
 
-        // Timing matching (20% of score)
-        const timingScore = this.matchTiming(pattern.duration, sequence.timestamps);
-        score += timingScore * 0.2;
+            // Timing matching (20% of score)
+            const timingScore = this.matchTiming(pattern.duration, sequence.timestamps);
+            score += timingScore * 0.2;
 
-        // Completeness (10% of score)
-        const completenessScore = this.calculateCompleteness(pattern);
-        score += completenessScore * 0.1;
+            // Completeness (10% of score)
+            const completenessScore = this.calculateCompleteness(pattern);
+            score += completenessScore * 0.1;
 
-        return Math.min(score, 1.0);
+            return Math.min(Math.max(score, 0), 1.0); // Clamp between 0 and 1
+        } catch (error) {
+            console.warn('Error calculating word score:', error);
+            return 0;
+        }
     }
 
     // Match gesture sequences using fuzzy matching
     private matchGestureSequence(patternGestures: string[], sequenceGestures: string[]): number {
-        if (patternGestures.length === 0 || sequenceGestures.length === 0) return 0;
-
-        // Simple substring matching with flexibility
-        let matches = 0;
-        const maxMatches = Math.min(patternGestures.length, sequenceGestures.length);
-
-        for (let i = 0; i < patternGestures.length; i++) {
-            const patternGesture = patternGestures[i];
-
-            // Look for pattern gesture in recent sequence
-            for (let j = Math.max(0, sequenceGestures.length - maxMatches); j < sequenceGestures.length; j++) {
-                if (this.gesturesMatch(patternGesture, sequenceGestures[j])) {
-                    matches++;
-                    break;
-                }
-            }
+        if (!patternGestures || !sequenceGestures || patternGestures.length === 0 || sequenceGestures.length === 0) {
+            return 0;
         }
 
-        return matches / patternGestures.length;
+        try {
+            // Simple substring matching with flexibility
+            let matches = 0;
+            const maxMatches = Math.min(patternGestures.length, sequenceGestures.length);
+
+            for (let i = 0; i < patternGestures.length; i++) {
+                const patternGesture = patternGestures[i];
+
+                // Look for pattern gesture in recent sequence
+                for (let j = Math.max(0, sequenceGestures.length - maxMatches); j < sequenceGestures.length; j++) {
+                    if (this.gesturesMatch(patternGesture, sequenceGestures[j])) {
+                        matches++;
+                        break;
+                    }
+                }
+            }
+
+            return matches / patternGestures.length;
+        } catch (error) {
+            console.warn('Error matching gesture sequence:', error);
+            return 0;
+        }
     }
 
     // Check if two gestures match (with fuzzy matching)
     private gesturesMatch(pattern: string, gesture: string): boolean {
+        if (!pattern || !gesture) return false;
+
         // Direct match
         if (pattern === gesture) return true;
 
@@ -260,24 +366,30 @@ export class WordLevelRecognizer {
 
     // Match movement patterns
     private matchMovementPatterns(patternMovements: MovementPattern[], sequenceMovements: MovementPattern[]): number {
-        if (patternMovements.length === 0) return 1; // No movement required
-        if (sequenceMovements.length === 0) return 0;
+        if (!patternMovements || patternMovements.length === 0) return 1; // No movement required
+        if (!sequenceMovements || sequenceMovements.length === 0) return 0;
 
-        let matches = 0;
-        for (const patternMovement of patternMovements) {
-            for (const sequenceMovement of sequenceMovements) {
-                if (this.movementsMatch(patternMovement, sequenceMovement)) {
-                    matches++;
-                    break;
+        try {
+            let matches = 0;
+            for (const patternMovement of patternMovements) {
+                for (const sequenceMovement of sequenceMovements) {
+                    if (this.movementsMatch(patternMovement, sequenceMovement)) {
+                        matches++;
+                        break;
+                    }
                 }
             }
-        }
 
-        return matches / patternMovements.length;
+            return matches / patternMovements.length;
+        } catch (error) {
+            console.warn('Error matching movement patterns:', error);
+            return 0;
+        }
     }
 
     // Check if movements match
     private movementsMatch(pattern: MovementPattern, movement: MovementPattern): boolean {
+        if (!pattern || !movement) return false;
         if (pattern.type !== movement.type) return false;
         if (pattern.direction && pattern.direction !== movement.direction) return false;
         return true;
@@ -285,33 +397,51 @@ export class WordLevelRecognizer {
 
     // Match timing
     private matchTiming(expectedDuration: number, timestamps: number[]): number {
-        if (timestamps.length < 2) return 0.5;
+        if (!timestamps || timestamps.length < 2) return 0.5;
 
-        const actualDuration = timestamps[timestamps.length - 1] - timestamps[0];
-        const ratio = Math.min(actualDuration, expectedDuration) / Math.max(actualDuration, expectedDuration);
+        try {
+            const actualDuration = timestamps[timestamps.length - 1] - timestamps[0];
+            if (actualDuration <= 0 || expectedDuration <= 0) return 0.5;
 
-        return ratio;
+            const ratio = Math.min(actualDuration, expectedDuration) / Math.max(actualDuration, expectedDuration);
+            return Math.max(ratio, 0);
+        } catch (error) {
+            console.warn('Error matching timing:', error);
+            return 0.5;
+        }
     }
 
     // Calculate word completeness
     private calculateCompleteness(pattern: WordGesturePattern): number {
-        const sequence = this.gestureSequence;
-        const gestureProgress = Math.min(sequence.gestures.length / pattern.gestures.length, 1);
-        const movementProgress = pattern.handMovements ?
-            Math.min(sequence.movements.length / pattern.handMovements.length, 1) : 1;
+        try {
+            const sequence = this.gestureSequence;
+            const gestureProgress = pattern.gestures.length > 0 ?
+                Math.min(sequence.gestures.length / pattern.gestures.length, 1) : 1;
+            const movementProgress = pattern.handMovements && pattern.handMovements.length > 0 ?
+                Math.min(sequence.movements.length / pattern.handMovements.length, 1) : 1;
 
-        return (gestureProgress + movementProgress) / 2;
+            return (gestureProgress + movementProgress) / 2;
+        } catch (error) {
+            console.warn('Error calculating completeness:', error);
+            return 0.5;
+        }
     }
 
     // Get word description
     private getWordDescription(pattern: WordGesturePattern): string {
-        const gestureList = pattern.gestures.join(' → ');
-        const movements = pattern.handMovements?.map(m => `${m.type} ${m.direction || ''}`).join(', ') || 'static';
-        return `${gestureList} with ${movements} movement`;
+        try {
+            const gestureList = pattern.gestures?.join(' → ') || 'unknown';
+            const movements = pattern.handMovements?.map(m => `${m.type} ${m.direction || ''}`).join(', ') || 'static';
+            return `${gestureList} with ${movements} movement`;
+        } catch (error) {
+            console.warn('Error getting word description:', error);
+            return `${pattern.word} gesture`;
+        }
     }
 
     // Get quality from score
     private getQualityFromScore(score: number): 'excellent' | 'good' | 'fair' | 'poor' {
+        if (typeof score !== 'number' || isNaN(score)) return 'poor';
         if (score >= 0.9) return 'excellent';
         if (score >= 0.7) return 'good';
         if (score >= 0.5) return 'fair';
@@ -320,26 +450,41 @@ export class WordLevelRecognizer {
 
     // Get word suggestions based on current sequence
     getWordSuggestions(): string[] {
-        const suggestions: { word: string; score: number }[] = [];
+        try {
+            const suggestions: { word: string; score: number }[] = [];
 
-        for (const pattern of this.wordVocabulary) {
-            const score = this.calculateWordScore(pattern);
-            if (score > 0.3) {
-                suggestions.push({ word: pattern.word, score });
+            for (const pattern of this.wordVocabulary) {
+                try {
+                    const score = this.calculateWordScore(pattern);
+                    if (score > 0.3) {
+                        suggestions.push({ word: pattern.word, score });
+                    }
+                } catch (error) {
+                    console.warn(`Error getting suggestion for ${pattern.word}:`, error);
+                    continue;
+                }
             }
-        }
 
-        return suggestions
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 5)
-            .map(s => s.word);
+            return suggestions
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5)
+                .map(s => s.word);
+        } catch (error) {
+            console.warn('Error getting word suggestions:', error);
+            return [];
+        }
     }
 
     // Get words by category
     getWordsByCategory(category: string): string[] {
-        return this.wordVocabulary
-            .filter(pattern => pattern.category === category)
-            .map(pattern => pattern.word);
+        try {
+            return this.wordVocabulary
+                .filter(pattern => pattern.category === category)
+                .map(pattern => pattern.word);
+        } catch (error) {
+            console.warn('Error getting words by category:', error);
+            return [];
+        }
     }
 
     // Clear current sequence
@@ -359,14 +504,24 @@ export class WordLevelRecognizer {
         lastGesture: string | null;
         suggestions: string[];
     } {
-        const sequence = this.gestureSequence;
-        return {
-            length: sequence.gestures.length,
-            duration: sequence.timestamps.length > 1 ?
-                sequence.timestamps[sequence.timestamps.length - 1] - sequence.timestamps[0] : 0,
-            lastGesture: sequence.gestures[sequence.gestures.length - 1] || null,
-            suggestions: this.getWordSuggestions()
-        };
+        try {
+            const sequence = this.gestureSequence;
+            return {
+                length: sequence.gestures.length,
+                duration: sequence.timestamps.length > 1 ?
+                    sequence.timestamps[sequence.timestamps.length - 1] - sequence.timestamps[0] : 0,
+                lastGesture: sequence.gestures[sequence.gestures.length - 1] || null,
+                suggestions: this.getWordSuggestions()
+            };
+        } catch (error) {
+            console.warn('Error getting sequence status:', error);
+            return {
+                length: 0,
+                duration: 0,
+                lastGesture: null,
+                suggestions: []
+            };
+        }
     }
 
     // Get recognition history
