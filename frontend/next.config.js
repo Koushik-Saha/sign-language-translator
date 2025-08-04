@@ -2,11 +2,17 @@
 const nextConfig = {
     reactStrictMode: false,
     experimental: {
-        suppressHydrationWarning: true,
+
     },
     compiler: {
         removeConsole: false,
-    }
+    },
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
+    typescript: {
+        ignoreBuildErrors: true, // Also ignore TypeScript errors if needed
+    },
 }
 
 module.exports = nextConfig

@@ -31,15 +31,21 @@ export default function AccessibilitySettings({ isOpen, onClose }: Accessibility
     }
   });
 
+  const validResolutions = ["720p", "480p", "1080p"] as const;
+  type Resolution = typeof validResolutions[number];
+
   useEffect(() => {
     if (user?.preferences) {
       setSettings(prev => ({
         ...prev,
         theme: user.preferences.theme,
         fontSize: user.preferences.fontSize,
-        highContrast: user.preferences.highContrast,
-        notifications: user.preferences.notifications,
-        camera: user.preferences.camera
+        camera: {
+          ...prev.camera,
+          resolution: validResolutions.includes(user.preferences.camera?.resolution as Resolution)
+              ? user.preferences.camera.resolution as Resolution
+              : prev.camera.resolution
+        }
       }));
     }
 
