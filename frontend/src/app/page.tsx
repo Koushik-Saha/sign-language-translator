@@ -3,11 +3,13 @@
 import NoSSR from '@/components/NoSSR';
 import CameraSection from '@/components/CameraSection';
 import TranslationPanel from '@/components/TranslationPanel';
+import AccessibilitySettings from '@/components/accessibility/AccessibilitySettings';
 import { TranslationProvider } from '@/context/TranslationContext';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
     const [announceMessage, setAnnounceMessage] = useState('');
+    const [showAccessibilitySettings, setShowAccessibilitySettings] = useState(false);
 
     // Announce messages to screen readers
     const announceToScreenReader = (message: string) => {
@@ -54,6 +56,22 @@ export default function Home() {
                                 <p className="text-gray-700 text-lg max-w-3xl">
                                     Use your camera to translate sign language in real-time with high accuracy
                                 </p>
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                    <a
+                                        href="/learn"
+                                        className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                                    >
+                                        <span role="img" aria-label="Learn">📚</span>
+                                        Learn ASL
+                                    </a>
+                                    <a
+                                        href="/text-to-sign"
+                                        className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                                    >
+                                        <span role="img" aria-label="Avatar">🤖</span>
+                                        Text to Sign
+                                    </a>
+                                </div>
                             </div>
 
                             {/* Accessibility status indicators - Fixed positioning */}
@@ -291,6 +309,7 @@ export default function Home() {
                                 </div>
 
                                 <button
+                                    onClick={() => setShowAccessibilitySettings(true)}
                                     className="flex items-center gap-3 bg-orange-600 hover:bg-orange-700 focus:bg-orange-700 text-white px-8 py-5 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 min-w-60 justify-center shadow-lg"
                                     aria-describedby="settings-desc"
                                 >
@@ -305,6 +324,12 @@ export default function Home() {
                     </section>
                 </main>
             </div>
+
+            {/* Accessibility Settings Modal */}
+            <AccessibilitySettings
+                isOpen={showAccessibilitySettings}
+                onClose={() => setShowAccessibilitySettings(false)}
+            />
 
             {/* Global Styles for Enhanced Accessibility */}
             <style jsx global>{`

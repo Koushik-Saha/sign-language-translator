@@ -1,14 +1,44 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const app = express();
-const PORT = 3001;
+const helmet = require('helmet');
+const morgan = require('morgan');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
 
-app.use(cors());
-app.use(express.json());
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sign-language-translator', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✅ Connected to MongoDB'))
+.catch(err => console.error('❌ MongoDB connection error:', err));
+
+app.use(helmet());
+app.use(morgan('combined'));
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const profileRoutes = require('./routes/profile');
+const learningRoutes = require('./routes/learning');
 
 app.get('/', (req, res) => {
   res.json({ message: 'Sign Language Translation API is running!' });
 });
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/learning', learningRoutes);
 
 // Text-to-Sign Translation endpoint
 app.post('/api/text-to-sign', (req, res) => {
