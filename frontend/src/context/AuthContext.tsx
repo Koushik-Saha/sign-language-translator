@@ -69,6 +69,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -173,7 +174,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (data: RegisterData) => {
     try {
       setIsLoading(true);
+      console.log("Register Data", data)
       const response = await api.post('/api/auth/register', data);
+
+      // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/translate`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({data}),
+      // });
       
       if (response.data.success) {
         const { user, accessToken } = response.data.data;

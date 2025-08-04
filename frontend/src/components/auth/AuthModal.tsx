@@ -38,8 +38,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         >
           <svg 
             className="w-5 h-5 text-gray-600" 
-            fill="none" 
-            strokeCurrentColor 
+            fill="none"
             viewBox="0 0 24 24"
           >
             <path 

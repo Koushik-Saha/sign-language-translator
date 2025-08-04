@@ -65,6 +65,13 @@ export default function Home() {
                                         Learn ASL
                                     </a>
                                     <a
+                                        href="/communicate"
+                                        className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                                    >
+                                        <span role="img" aria-label="Communicate">💬</span>
+                                        Communicate
+                                    </a>
+                                    <a
                                         href="/text-to-sign"
                                         className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
                                     >

@@ -5,8 +5,11 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
+const http = require('http');
+const path = require('path');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sign-language-translator', {
@@ -30,6 +33,12 @@ app.use(cookieParser());
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const learningRoutes = require('./routes/learning');
+const mlRoutes = require('./routes/ml');
+const communicationRoutes = require('./routes/communication');
+
+// Initialize Socket.IO
+const SocketManager = require('./socket/index');
+const socketManager = new SocketManager(server);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Sign Language Translation API is running!' });
@@ -39,6 +48,11 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/learning', learningRoutes);
+app.use('/api/ml', mlRoutes);
+app.use('/api/communication', communicationRoutes);
+
+// Static file serving for uploaded content
+app.use('/api/training-data/video', express.static(path.join(__dirname, 'uploads/training-data')));
 
 // Text-to-Sign Translation endpoint
 app.post('/api/text-to-sign', (req, res) => {
@@ -157,6 +171,9 @@ app.post('/api/translate', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Socket.IO server initialized`);
+  console.log(`🤖 ML Pipeline ready`);
+  console.log(`💬 Real-time communication enabled`);
 });
