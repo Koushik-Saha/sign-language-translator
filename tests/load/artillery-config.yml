@@ -1,0 +1,162 @@
+config:
+  target: 'http://localhost:5000'
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up"
+    
+    # Ramp up phase
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp up"
+    
+    # Peak load phase
+    - duration: 300
+      arrivalRate: 50
+      name: "Peak load"
+    
+    # Stress test phase
+    - duration: 180
+      arrivalRate: 50
+      rampTo: 100
+      name: "Stress test"
+    
+    # Cool down phase
+    - duration: 60
+      arrivalRate: 100
+      rampTo: 10
+      name: "Cool down"
+  
+  processor: "./test-functions.js"
+  
+  variables:
+    testUser:
+      - "testuser1"
+      - "testuser2"
+      - "testuser3"
+      - "testuser4"
+      - "testuser5"
+    
+    testMessages:
+      - "Hello world"
+      - "How are you?"
+      - "Thank you"
+      - "Good morning"
+      - "See you later"
+
+scenarios:
+  # Authentication flow test
+  - name: "User Authentication Flow"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/register"
+          json:
+            username: "loadtest_{{ $randomString() }}"
+            email: "loadtest{{ $randomInt(1000, 9999) }}@example.com"
+            password: "TestPassword123!"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "loadtest{{ $randomInt(1000, 9999) }}@example.com"
+            password: "TestPassword123!"
+          capture:
+            - json: "$.token"
+              as: "loginToken"
+  
+  # Translation API test
+  - name: "Translation Services"
+    weight: 40
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "testuser@example.com"
+            password: "testpassword"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/ml/text-to-sign"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            text: "{{ testMessages }}"
+            language: "asl"
+          expect:
+            - statusCode: 200
+      
+      - post:
+          url: "/api/ml/sign-to-text"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            gestures: [
+              { x: 0.5, y: 0.5, confidence: 0.9 },
+              { x: 0.3, y: 0.4, confidence: 0.8 }
+            ]
+          expect:
+            - statusCode: 200
+  
+  # Real-time communication test
+  - name: "Socket.IO Communication"
+    weight: 30
+    engine: socketio
+    flow:
+      - emit:
+          channel: "join-room"
+          data:
+            roomId: "test-room-{{ $randomInt(1, 10) }}"
+            userId: "{{ testUser }}"
+      
+      - emit:
+          channel: "send-message"
+          data:
+            message: "{{ testMessages }}"
+            roomId: "test-room-{{ $randomInt(1, 10) }}"
+  
+  # File upload test
+  - name: "File Upload"
+    weight: 10
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "testuser@example.com"
+            password: "testpassword"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/profile/avatar"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          formData:
+            avatar: "@./test-files/test-image.jpg"
+
+# Performance thresholds
+ensure:
+  p95: 500    # 95% of requests should complete within 500ms
+  p99: 1000   # 99% of requests should complete within 1000ms
+  maxErrorRate: 1  # Error rate should be less than 1%
+
+# Metrics collection
+plugins:
+  metrics-by-endpoint:
+    # Group metrics by endpoint
+    useOnlyRequestNames: true
+  
+  hdrhistogram:
+    # Detailed latency metrics
+    - P50
+    - P95
+    - P99
+    - P99.9

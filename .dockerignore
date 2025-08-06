@@ -1,0 +1,92 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Logs
+logs
+*.log
+backend/logs/*
+!backend/logs/.gitkeep
+
+# Runtime files
+lib-cov
+coverage
+.nyc_output
+.grunt
+bower_components
+.lock-wscript
+build/Release
+.next
+
+# Temporary folders
+tmp
+temp
+.tmp
+.temp
+backend/temp/*
+!backend/temp/.gitkeep
+backend/exports/*
+!backend/exports/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Test files
+test-results
+coverage
+
+# Build artifacts
+dist
+build
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+docs/
+*.md
+
+# SSL certificates (should be mounted as volumes)
+ssl/
+certificates/
+
+# Monitoring and config files that should be mounted
+nginx.conf
+monitoring/
