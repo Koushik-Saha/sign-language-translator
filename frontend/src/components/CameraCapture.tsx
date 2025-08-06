@@ -24,7 +24,7 @@ export default function CameraCapture() {
     // NEW: Large camera view state
     const [showLargeCameraView, setShowLargeCameraView] = useState(false);
 
-    const { initializeHandDetection, currentGesture } = useHandDetection();
+    const { initializeHandDetection, currentGesture, currentLandmarks } = useHandDetection();
     const {
         currentWord,
         setCurrentWord,
@@ -99,12 +99,12 @@ export default function CameraCapture() {
             if (recognitionMode === 'word' || recognitionMode === 'hybrid') {
                 processGestureForWord(
                     currentGesture.letter,
-                    [], // landmarks would be passed from hand detection
+                    currentLandmarks || [], // Pass actual landmarks from hand detection
                     currentGesture.confidence
                 );
             }
         }
-    }, [currentGesture, recognitionMode, processGestureForWord]);
+    }, [currentGesture, currentLandmarks, recognitionMode, processGestureForWord]);
 
     const startCamera = async () => {
         try {

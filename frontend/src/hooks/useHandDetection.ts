@@ -14,6 +14,7 @@ interface UseHandDetectionReturn {
     isDetecting: boolean;
     lastDetection: HandDetectionResult | null;
     currentGesture: GestureResult | null;
+    currentLandmarks: any[] | null;
 }
 
 // Load MediaPipe from CDN
@@ -49,6 +50,7 @@ export function useHandDetection(): UseHandDetectionReturn {
     const isDetectingRef = useRef(false);
     const lastDetectionRef = useRef<HandDetectionResult | null>(null);
     const [currentGesture, setCurrentGesture] = useState<GestureResult | null>(null);
+    const [currentLandmarks, setCurrentLandmarks] = useState<any[] | null>(null);
     const gestureRecognizer = useRef(new GestureRecognizer());
     const noHandFrames = useRef(0);
 
@@ -108,6 +110,7 @@ export function useHandDetection(): UseHandDetectionReturn {
                     // Recognize gesture
                     const gestureResult = gestureRecognizer.current.recognizeGesture(landmarks);
                     setCurrentGesture(gestureResult);
+                    setCurrentLandmarks(landmarks);
 
                     // Draw connections with quality-based color
                     const connectionColor = gestureResult.quality === 'excellent' ? '#00FF00' :
@@ -179,6 +182,7 @@ export function useHandDetection(): UseHandDetectionReturn {
                     if (noHandFrames.current > 10) {
                         gestureRecognizer.current.clearHistory();
                         setCurrentGesture(null);
+                        setCurrentLandmarks(null);
                         lastDetectionRef.current = null;
                     }
                 }
@@ -217,6 +221,7 @@ export function useHandDetection(): UseHandDetectionReturn {
         initializeHandDetection,
         isDetecting: isDetectingRef.current,
         lastDetection: lastDetectionRef.current,
-        currentGesture
+        currentGesture,
+        currentLandmarks
     };
 }

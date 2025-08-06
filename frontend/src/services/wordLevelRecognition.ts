@@ -32,6 +32,95 @@ export interface WordRecognitionResult {
 }
 
 export class WordLevelRecognizer {
+    // Simple letter-sequence based words for fingerspelling
+    private letterBasedWords: WordGesturePattern[] = [
+        {
+            word: 'HI',
+            gestures: ['H', 'I'],
+            duration: 2000,
+            confidence: 0.9,
+            category: 'greeting'
+        },
+        {
+            word: 'BYE',
+            gestures: ['B', 'Y', 'E'],
+            duration: 3000,
+            confidence: 0.8,
+            category: 'greeting'
+        },
+        {
+            word: 'YES',
+            gestures: ['Y', 'E', 'S'],
+            duration: 3000,
+            confidence: 0.8,
+            category: 'common'
+        },
+        {
+            word: 'NO',
+            gestures: ['N', 'O'],
+            duration: 2000,
+            confidence: 0.9,
+            category: 'common'
+        },
+        {
+            word: 'OK',
+            gestures: ['O', 'K'],
+            duration: 2000,
+            confidence: 0.9,
+            category: 'common'
+        },
+        {
+            word: 'ME',
+            gestures: ['M', 'E'],
+            duration: 2000,
+            confidence: 0.9,
+            category: 'pronoun'
+        },
+        {
+            word: 'YOU',
+            gestures: ['Y', 'O', 'U'],
+            duration: 3000,
+            confidence: 0.8,
+            category: 'pronoun'
+        },
+        {
+            word: 'WE',
+            gestures: ['W', 'E'],
+            duration: 2000,
+            confidence: 0.9,
+            category: 'pronoun'
+        },
+        {
+            word: 'GO',
+            gestures: ['G', 'O'],
+            duration: 2000,
+            confidence: 0.9,
+            category: 'action'
+        },
+        {
+            word: 'EAT',
+            gestures: ['E', 'A', 'T'],
+            duration: 3000,
+            confidence: 0.8,
+            category: 'action'
+        },
+        {
+            word: 'HELP',
+            gestures: ['H', 'E', 'L', 'P'],
+            duration: 4000,
+            confidence: 0.7,
+            category: 'action'
+        },
+        {
+            word: 'LOVE',
+            gestures: ['L', 'O', 'V', 'E'],
+            duration: 4000,
+            confidence: 0.7,
+            category: 'emotion'
+        }
+    ];
+    
+    // Complex gesture-based words (for future implementation)
     private wordVocabulary: WordGesturePattern[] = [
         // === Basic Pronouns ===
         {
@@ -911,15 +1000,14 @@ export class WordLevelRecognizer {
             this.clearSequence();
         }
 
-        // Validate landmarks before adding
-        if (!landmarks || !Array.isArray(landmarks) || landmarks.length === 0) {
-            console.warn('Invalid landmarks provided to addGestureToSequence');
-            return;
-        }
-
+        // For letter-based recognition, we'll allow empty landmarks as we're working with fingerspelling
+        // This is a temporary fix to allow the system to work with the current letter-based recognizer
+        console.log(`Adding gesture to sequence: ${gesture} at ${timestamp}`);
+        
         this.gestureSequence.gestures.push(gesture);
         this.gestureSequence.timestamps.push(timestamp);
-        this.gestureSequence.landmarks.push(landmarks);
+        // Use empty array if landmarks are not available (fingerspelling mode)
+        this.gestureSequence.landmarks.push(landmarks || []);
 
         // Detect movement pattern with safety checks
         try {
@@ -1065,6 +1153,30 @@ export class WordLevelRecognizer {
             let bestMatch: WordRecognitionResult | null = null;
             let bestScore = 0;
 
+            // Check letter-based words first (much simpler matching)
+            for (const pattern of this.letterBasedWords) {
+                try {
+                    const score = this.calculateLetterSequenceScore(pattern);
+
+                    if (score > bestScore && score > 0.6) {
+                        bestScore = score;
+                        bestMatch = {
+                            word: pattern.word,
+                            confidence: score,
+                            category: pattern.category,
+                            description: `Fingerspelled word: ${pattern.word}`,
+                            gestures: pattern.gestures,
+                            quality: this.getQualityFromScore(score),
+                            completeness: this.calculateLetterCompleteness(pattern)
+                        };
+                    }
+                } catch (error) {
+                    console.warn(`Error calculating letter score for pattern ${pattern.word}:`, error);
+                    continue;
+                }
+            }
+
+            // If no letter-based match found, check complex gesture patterns
             for (const pattern of this.wordVocabulary) {
                 try {
                     const score = this.calculateWordScore(pattern);
@@ -1292,12 +1404,75 @@ export class WordLevelRecognizer {
         }
     }
 
+    // Calculate letter sequence score (for fingerspelling)
+    private calculateLetterSequenceScore(pattern: WordGesturePattern): number {
+        try {
+            const currentGestures = this.gestureSequence.gestures;
+            const patternGestures = pattern.gestures;
+
+            if (currentGestures.length === 0) {
+                return 0;
+            }
+
+            // Exact match gets highest score
+            if (currentGestures.length === patternGestures.length &&
+                currentGestures.every((gesture, index) => gesture === patternGestures[index])) {
+                return 0.95;
+            }
+
+            // Partial match at the beginning
+            if (patternGestures.length > currentGestures.length) {
+                const beginningMatch = currentGestures.every((gesture, index) => gesture === patternGestures[index]);
+                if (beginningMatch) {
+                    const completionRatio = currentGestures.length / patternGestures.length;
+                    return 0.6 + (completionRatio * 0.3); // Score between 0.6-0.9
+                }
+            }
+
+            // Check for partial matches with some tolerance
+            let matchingLetters = 0;
+            const maxLength = Math.max(currentGestures.length, patternGestures.length);
+            
+            for (let i = 0; i < Math.min(currentGestures.length, patternGestures.length); i++) {
+                if (currentGestures[i] === patternGestures[i]) {
+                    matchingLetters++;
+                }
+            }
+
+            const matchRatio = matchingLetters / maxLength;
+            return matchRatio > 0.5 ? matchRatio * 0.8 : 0; // Scale down partial matches
+
+        } catch (error) {
+            console.warn('Error calculating letter sequence score:', error);
+            return 0;
+        }
+    }
+
+    // Calculate letter-based word completeness
+    private calculateLetterCompleteness(pattern: WordGesturePattern): number {
+        try {
+            const currentLength = this.gestureSequence.gestures.length;
+            const expectedLength = pattern.gestures.length;
+            
+            return Math.min(currentLength / expectedLength, 1.0);
+        } catch (error) {
+            console.warn('Error calculating letter completeness:', error);
+            return 0;
+        }
+    }
+
     // Get words by category
     getWordsByCategory(category: string): string[] {
         try {
-            return this.wordVocabulary
+            // Combine both letter-based and complex gesture words
+            const letterWords = this.letterBasedWords
                 .filter(pattern => pattern.category === category)
                 .map(pattern => pattern.word);
+            const gestureWords = this.wordVocabulary
+                .filter(pattern => pattern.category === category)
+                .map(pattern => pattern.word);
+            
+            return [...letterWords, ...gestureWords];
         } catch (error) {
             console.warn('Error getting words by category:', error);
             return [];
