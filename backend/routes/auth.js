@@ -4,6 +4,8 @@ const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { auth, generateTokens, verifyRefreshToken } = require('../middleware/auth');
 const crypto = require('crypto');
+const rateLimiting = require('../middleware/advancedRateLimiting');
+const inputValidation = require('../middleware/inputValidation');
 
 const router = express.Router();
 
@@ -41,7 +43,7 @@ const loginValidation = [
 ];
 
 // Register
-router.post('/register', authLimiter, registerValidation, async (req, res) => {
+router.post('/register', rateLimiting.strict, registerValidation, inputValidation.validateRequest(), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -114,7 +116,7 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
 });
 
 // Login
-router.post('/login', authLimiter, loginValidation, async (req, res) => {
+router.post('/login', rateLimiting.strict, loginValidation, inputValidation.validateRequest(), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -295,7 +297,7 @@ router.post('/verify-email', async (req, res) => {
 });
 
 // Request password reset
-router.post('/forgot-password', authLimiter, [
+router.post('/forgot-password', rateLimiting.strict, [
   body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email')
 ], async (req, res) => {
   try {
@@ -341,7 +343,7 @@ router.post('/forgot-password', authLimiter, [
 });
 
 // Reset password
-router.post('/reset-password', authLimiter, [
+router.post('/reset-password', rateLimiting.strict, [
   body('token').notEmpty().withMessage('Reset token is required'),
   body('password')
     .isLength({ min: 6 })

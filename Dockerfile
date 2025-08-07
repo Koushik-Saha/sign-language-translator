@@ -1,7 +1,7 @@
 # Multi-stage build for production optimization
 FROM node:20-alpine AS base
 
-# Install system dependencies
+# Install system dependencies and security tools
 RUN apk add --no-cache \
     ffmpeg \
     python3 \
@@ -12,6 +12,10 @@ RUN apk add --no-cache \
     giflib-dev \
     librsvg-dev \
     libjpeg-turbo-dev \
+    dumb-init \
+    ca-certificates \
+    curl \
+    && update-ca-certificates \
     && rm -rf /var/cache/apk/*
 
 # Set working directory
@@ -108,8 +112,11 @@ ENV PORT=5000
 EXPOSE 5000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD node ./backend/scripts/healthcheck.js
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node ./backend/scripts/healthcheck.js || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start application
 CMD ["node", "./backend/server.js"]
