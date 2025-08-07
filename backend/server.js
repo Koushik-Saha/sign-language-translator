@@ -88,6 +88,10 @@ const gestureLibraryRoutes = require('./routes/gestureLibrary');
 const publicApiRoutes = require('./routes/publicApi');
 const apiKeysRoutes = require('./routes/apiKeys');
 const exportRoutes = require('./routes/export');
+const wordRecognitionRoutes = require('./routes/wordRecognition');
+const facialExpressionRoutes = require('./routes/facialExpressions');
+const callRecordingRoutes = require('./routes/callRecording');
+const voiceCommandRoutes = require('./routes/voiceCommands');
 
 // Initialize Socket.IO
 const SocketManager = require('./socket/index');
@@ -109,6 +113,10 @@ app.use('/api/gestures', gestureLibraryRoutes);
 app.use('/api/public', publicApiRoutes);
 app.use('/api/api-keys', apiKeysRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/word-recognition', wordRecognitionRoutes);
+app.use('/api/facial-expressions', facialExpressionRoutes);
+app.use('/api/call-recording', callRecordingRoutes);
+app.use('/api/voice-commands', voiceCommandRoutes);
 
 // Static file serving for uploaded content
 app.use('/api/training-data/video', express.static(path.join(__dirname, 'uploads/training-data')));
