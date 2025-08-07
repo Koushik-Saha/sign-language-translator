@@ -66,7 +66,7 @@ const errorHandler = (err, req, res, next) => {
 
     // Determine log level based on error type and status
     if (err.statusCode >= 500) {
-        logger.critical(err.message, errorMeta);
+        logger.error(err.message, errorMeta);
     } else if (err.statusCode >= 400) {
         logger.warn(err.message, errorMeta);
     } else {
@@ -160,7 +160,7 @@ const asyncHandler = (fn) => (req, res, next) => {
 
 // Global unhandled promise rejection handler
 process.on('unhandledRejection', (err, promise) => {
-    logger.critical('Unhandled Promise Rejection', {
+    logger.error('Unhandled Promise Rejection', {
         error: err.message,
         stack: err.stack,
         promise: promise.toString()
@@ -172,7 +172,7 @@ process.on('unhandledRejection', (err, promise) => {
 
 // Global uncaught exception handler
 process.on('uncaughtException', (err) => {
-    logger.critical('Uncaught Exception', {
+    logger.error('Uncaught Exception', {
         error: err.message,
         stack: err.stack
     });

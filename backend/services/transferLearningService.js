@@ -1,4 +1,18 @@
-const tf = require('@tensorflow/tfjs-node');
+// Graceful fallback for TensorFlow.js Node
+let tf;
+try {
+  tf = require('@tensorflow/tfjs-node');
+} catch (error) {
+  console.warn('TensorFlow.js Node not available, using CPU backend fallback');
+  try {
+    tf = require('@tensorflow/tfjs');
+    require('@tensorflow/tfjs-backend-cpu');
+  } catch (fallbackError) {
+    console.error('Neither @tensorflow/tfjs-node nor @tensorflow/tfjs with CPU backend available');
+    tf = null;
+  }
+}
+
 const fs = require('fs').promises;
 const path = require('path');
 const logger = require('./logger');
@@ -9,6 +23,12 @@ class TransferLearningService {
   constructor() {
     this.baseModelsPath = path.join(__dirname, '../storage/base-models');
     this.trainingDataPath = path.join(__dirname, '../storage/training-data');
+    this.isTensorFlowAvailable = tf !== null;
+    
+    if (!this.isTensorFlowAvailable) {
+      logger.warn('TensorFlow.js not available - transfer learning features disabled');
+    }
+    
     this.initializeStorage();
   }
 
@@ -22,9 +42,20 @@ class TransferLearningService {
   }
 
   /**
+   * Check if TensorFlow.js is available
+   */
+  checkTensorFlowAvailability() {
+    if (!this.isTensorFlowAvailable) {
+      throw new Error('TensorFlow.js is not available. Please install @tensorflow/tfjs-node or @tensorflow/tfjs with CPU backend.');
+    }
+  }
+
+  /**
    * Load pre-trained base model for transfer learning
    */
   async loadBaseModel(modelType) {
+    this.checkTensorFlowAvailability();
+    
     try {
       const baseModelPath = path.join(this.baseModelsPath, `${modelType}-base`);
       
@@ -280,6 +311,8 @@ class TransferLearningService {
    * Prepare model for transfer learning
    */
   async prepareModelForTransferLearning(baseModel, newOutputClasses, freezeLayers = true) {
+    this.checkTensorFlowAvailability();
+    
     try {
       // Remove the final classification layer
       const featureExtractor = tf.model({
@@ -451,6 +484,8 @@ class TransferLearningService {
    * Train model using transfer learning
    */
   async trainWithTransferLearning(modelType, gestureLabels, trainingConfig = {}) {
+    this.checkTensorFlowAvailability();
+    
     try {
       const {
         epochs = 10,
@@ -578,6 +613,8 @@ class TransferLearningService {
    * Fine-tune a pre-trained model
    */
   async fineTuneModel(modelId, additionalData, fineTuningConfig = {}) {
+    this.checkTensorFlowAvailability();
+    
     try {
       const {
         epochs = 5,

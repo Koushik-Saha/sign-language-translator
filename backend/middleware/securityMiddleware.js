@@ -93,14 +93,14 @@ class SecurityMiddleware {
                 const skipPaths = ['/api/health', '/api/metrics'];
                 return skipPaths.some(path => req.path.startsWith(path));
             },
-            onLimitReached: (req) => {
-                logger.security('Rate limit exceeded', {
-                    ip: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    path: req.path,
-                    userId: req.user?.id
-                });
-            }
+            // onLimitReached: (req) => {
+            //     logger.security('Rate limit exceeded', {
+            //         ip: req.ip,
+            //         userAgent: req.get('User-Agent'),
+            //         path: req.path,
+            //         userId: req.user?.id
+            //     });
+            // }
         });
     }
 
