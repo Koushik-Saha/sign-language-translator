@@ -67,7 +67,6 @@ class AdvancedRateLimiter {
             legacyHeaders: false,
             keyGenerator: this.generateRateLimitKey.bind(this),
             skip: this.shouldSkipRateLimit.bind(this),
-            onLimitReached: this.onRateLimitReached.bind(this)
         });
     }
 
@@ -92,14 +91,14 @@ class AdvancedRateLimiter {
                 retryAfter: '1 hour'
             },
             keyGenerator: this.generateRateLimitKey.bind(this),
-            onLimitReached: (req) => {
-                logger.security('Strict rate limit exceeded', {
-                    ip: req.ip,
-                    path: req.path,
-                    userId: req.user?.id,
-                    userAgent: req.get('User-Agent')
-                });
-            }
+            // onLimitReached: (req) => {
+            //     logger.security('Strict rate limit exceeded', {
+            //         ip: req.ip,
+            //         path: req.path,
+            //         userId: req.user?.id,
+            //         userAgent: req.get('User-Agent')
+            //     });
+            // }
         });
     }
 
@@ -108,16 +107,16 @@ class AdvancedRateLimiter {
         return slowDown({
             windowMs: 15 * 60 * 1000, // 15 minutes
             delayAfter: 50, // Start slowing down after 50 requests
-            delayMs: 500, // Increase delay by 500ms for each request
+            delayMs: () => 500,
             maxDelayMs: 10000, // Maximum delay of 10 seconds
             keyGenerator: this.generateRateLimitKey.bind(this),
-            onLimitReached: (req) => {
-                logger.warn('Request slowdown activated', {
-                    ip: req.ip,
-                    path: req.path,
-                    userId: req.user?.id
-                });
-            }
+            // onLimitReached: (req) => {
+            //     logger.warn('Request slowdown activated', {
+            //         ip: req.ip,
+            //         path: req.path,
+            //         userId: req.user?.id
+            //     });
+            // }
         });
     }
 
@@ -494,6 +493,29 @@ class AdvancedRateLimiter {
         }
         return result.sort((a, b) => b.score - a.score);
     }
+
+    // Create custom rate limiter with specific options
+    createCustomLimiter(options = {}) {
+        const store = this.redisClient ? 
+            new RedisStore({
+                sendCommand: (...args) => this.redisClient.sendCommand(args),
+            }) : undefined;
+
+        const defaultOptions = {
+            windowMs: 15 * 60 * 1000, // 15 minutes
+            max: 100,
+            store,
+            keyGenerator: this.generateRateLimitKey.bind(this),
+            skip: this.shouldSkipRateLimit.bind(this),
+            standardHeaders: true,
+            legacyHeaders: false,
+        };
+
+        return rateLimit({
+            ...defaultOptions,
+            ...options
+        });
+    }
 }
 
 const rateLimiter = new AdvancedRateLimiter();
@@ -505,4 +527,5 @@ module.exports.slowDown = rateLimiter.createSlowDown();
 module.exports.dosProtection = rateLimiter.dosProtection();
 module.exports.connectionLimit = rateLimiter.createConnectionLimit();
 module.exports.bandwidthLimit = rateLimiter.createBandwidthLimit();
+module.exports.createCustomLimiter = rateLimiter.createCustomLimiter.bind(rateLimiter);
 module.exports.rateLimiter = rateLimiter;
