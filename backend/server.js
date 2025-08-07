@@ -8,6 +8,10 @@ const cookieParser = require('cookie-parser');
 const http = require('http');
 const path = require('path');
 
+// Import middleware
+const inputValidation = require('./middleware/inputValidation');
+const advancedRateLimiting = require('./middleware/advancedRateLimiting');
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
@@ -19,15 +23,58 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sign-lang
 .then(() => console.log('✅ Connected to MongoDB'))
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
-app.use(helmet());
+// Security middleware (order matters)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"]
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
 app.use(morgan('combined'));
+
+// Rate limiting (before other middleware)
+app.use(advancedRateLimiting.dosProtection);
+app.use(advancedRateLimiting.connectionLimit);
+app.use(advancedRateLimiting.slowDown);
+app.use(advancedRateLimiting);
+
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+
+// Body parsing with limits
+app.use(express.json({ 
+  limit: '10mb',
+  type: 'application/json',
+  verify: (req, res, buf) => {
+    // Store raw body for verification if needed
+    req.rawBody = buf;
+  }
+}));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// Input validation and sanitization middleware
+app.use(inputValidation.sanitizeRequest());
+app.use(inputValidation.detectMaliciousInput());
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -35,6 +82,12 @@ const profileRoutes = require('./routes/profile');
 const learningRoutes = require('./routes/learning');
 const mlRoutes = require('./routes/ml');
 const communicationRoutes = require('./routes/communication');
+const gdprRoutes = require('./routes/gdpr');
+const metricsRoutes = require('./routes/metrics');
+const gestureLibraryRoutes = require('./routes/gestureLibrary');
+const publicApiRoutes = require('./routes/publicApi');
+const apiKeysRoutes = require('./routes/apiKeys');
+const exportRoutes = require('./routes/export');
 
 // Initialize Socket.IO
 const SocketManager = require('./socket/index');
@@ -50,6 +103,12 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/learning', learningRoutes);
 app.use('/api/ml', mlRoutes);
 app.use('/api/communication', communicationRoutes);
+app.use('/api/gdpr', gdprRoutes);
+app.use('/api/metrics', metricsRoutes);
+app.use('/api/gestures', gestureLibraryRoutes);
+app.use('/api/public', publicApiRoutes);
+app.use('/api/api-keys', apiKeysRoutes);
+app.use('/api/export', exportRoutes);
 
 // Static file serving for uploaded content
 app.use('/api/training-data/video', express.static(path.join(__dirname, 'uploads/training-data')));

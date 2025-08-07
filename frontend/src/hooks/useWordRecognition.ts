@@ -66,7 +66,7 @@ export function useWordRecognition() {
                 attemptWordRecognition();
             }, 2000); // 2 seconds after last gesture
         }
-    }, [state.autoTranslateWords]);
+    }, [state.autoTranslateWords]); // intentionally omit attemptWordRecognition to avoid circular dependency
 
     // Attempt word recognition
     const attemptWordRecognition = useCallback(async () => {

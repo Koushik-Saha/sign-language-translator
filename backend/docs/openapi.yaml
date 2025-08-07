@@ -1,0 +1,996 @@
+openapi: 3.0.3
+info:
+  title: Sign Language Translator Public API
+  description: |
+    A comprehensive API for sign language translation, gesture recognition, and related services.
+    
+    ## Authentication
+    This API supports two authentication methods:
+    - **API Keys**: Include your API key in the `X-API-Key` header
+    - **JWT Tokens**: Include your JWT token in the `Authorization` header with `Bearer` prefix
+    
+    ## Rate Limiting
+    All endpoints are rate limited. Current limits:
+    - 100 requests per 15 minutes per IP address
+    - Individual API key limits apply based on your plan
+    
+    ## Response Format
+    All responses follow a consistent format:
+    ```json
+    {
+      "success": true|false,
+      "data": { ... },
+      "error": "error_type",
+      "message": "Error description",
+      "timestamp": "2024-01-01T00:00:00Z"
+    }
+    ```
+    
+    ## Changelog
+    - v1.0.0: Initial release with translation, gestures, and models endpoints
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@signlanguagetranslator.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://signlanguagetranslator.com/terms
+
+servers:
+  - url: https://api.signlanguagetranslator.com/api/public
+    description: Production server
+  - url: https://staging-api.signlanguagetranslator.com/api/public
+    description: Staging server
+  - url: http://localhost:3001/api/public
+    description: Development server
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+paths:
+  /docs:
+    get:
+      tags:
+        - Documentation
+      summary: Get API documentation
+      description: Returns comprehensive API documentation including all endpoints, parameters, and examples
+      responses:
+        '200':
+          description: API documentation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "Sign Language Translator Public API"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  endpoints:
+                    type: object
+                    description: Available endpoints and their documentation
+
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Check the health status of the API and its dependencies
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /v1/translate/text-to-sign:
+    post:
+      tags:
+        - Translation
+      summary: Translate text to sign language
+      description: Convert text input into a sequence of sign language gestures with detailed metadata
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  maxLength: 1000
+                  description: Text to translate to sign language
+                  example: "Hello, how are you?"
+                targetLibrary:
+                  type: string
+                  enum: [ASL, BSL, LSF, ISL, AUSLAN]
+                  default: BSL
+                  description: Target sign language library
+                includeMetadata:
+                  type: boolean
+                  default: true
+                  description: Include processing metadata in response
+            examples:
+              basic:
+                summary: Basic translation
+                value:
+                  text: "Hello world"
+                  targetLibrary: "BSL"
+              advanced:
+                summary: Advanced translation with metadata
+                value:
+                  text: "Thank you for your help"
+                  targetLibrary: "ASL"
+                  includeMetadata: true
+      responses:
+        '200':
+          description: Translation successful
+          headers:
+            X-RateLimit-Remaining:
+              description: Number of requests remaining in current rate limit window
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Time when rate limit resets
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/translate/batch:
+    post:
+      tags:
+        - Translation
+      summary: Batch translate multiple texts
+      description: Translate up to 10 texts in a single request
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - texts
+              properties:
+                texts:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    maxLength: 500
+                  description: Array of texts to translate
+                  example: ["Hello", "Thank you", "Goodbye"]
+                targetLibrary:
+                  type: string
+                  enum: [ASL, BSL, LSF, ISL, AUSLAN]
+                  default: BSL
+      responses:
+        '200':
+          description: Batch translation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchTranslationResponse'
+
+  /v1/gestures/libraries:
+    get:
+      tags:
+        - Gestures
+      summary: Get available sign language libraries
+      description: Returns information about all available sign language libraries
+      responses:
+        '200':
+          description: Libraries retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      libraries:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GestureLibrary'
+                      totalLibraries:
+                        type: integer
+                        example: 5
+
+  /v1/gestures/search:
+    get:
+      tags:
+        - Gestures
+      summary: Search for gestures
+      description: Search for specific gestures across one or more sign language libraries
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: word
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Word or gesture to search for
+          example: "hello"
+        - name: libraries
+          in: query
+          schema:
+            type: string
+          description: Comma-separated list of library codes to search
+          example: "BSL,ASL,LSF"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of results to return
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GestureSearchResponse'
+
+  /v1/gestures/advanced-search:
+    post:
+      tags:
+        - Gestures
+      summary: Advanced gesture search
+      description: Search for gestures with advanced filtering options
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: Search query
+                libraries:
+                  type: array
+                  items:
+                    type: string
+                    enum: [ASL, BSL, LSF, ISL, AUSLAN]
+                  default: [ASL, BSL, LSF]
+                categories:
+                  type: array
+                  items:
+                    type: string
+                  description: Filter by gesture categories
+                handshapes:
+                  type: array
+                  items:
+                    type: string
+                  description: Filter by handshapes
+                movements:
+                  type: array
+                  items:
+                    type: string
+                  description: Filter by movement types
+                complexity:
+                  type: object
+                  properties:
+                    min:
+                      type: number
+                      minimum: 0
+                    max:
+                      type: number
+                      maximum: 10
+                  description: Filter by complexity score
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+      responses:
+        '200':
+          description: Advanced search completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvancedSearchResponse'
+
+  /v1/models/available:
+    get:
+      tags:
+        - Models
+      summary: Get available ML models
+      description: Returns list of available machine learning models for predictions
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Models retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      models:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MLModel'
+
+  /v1/models/predict:
+    post:
+      tags:
+        - Models
+      summary: Get model predictions
+      description: Use ML models to get predictions on input data
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelId
+                - input
+              properties:
+                modelId:
+                  type: string
+                  description: ID of the model to use for prediction
+                input:
+                  type: object
+                  description: Input data for the model
+                options:
+                  type: object
+                  description: Optional parameters for prediction
+      responses:
+        '200':
+          description: Prediction completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+
+  /v1/voice/process:
+    post:
+      tags:
+        - Voice
+      summary: Process voice input
+      description: Convert audio data to text using speech recognition
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - audioData
+              properties:
+                audioData:
+                  type: string
+                  format: base64
+                  description: Base64 encoded audio data
+                language:
+                  type: string
+                  default: "en-US"
+                  description: Language code for speech recognition
+                format:
+                  type: string
+                  enum: [wav, mp3, webm]
+                  default: webm
+                  description: Audio format
+      responses:
+        '200':
+          description: Voice processing completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceProcessingResponse'
+
+  /v1/usage/stats:
+    get:
+      tags:
+        - Analytics
+      summary: Get API usage statistics
+      description: Retrieve usage statistics for your API key
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            enum: [1h, 24h, 7d, 30d]
+            default: "24h"
+          description: Time period for statistics
+      responses:
+        '200':
+          description: Usage statistics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStatsResponse'
+
+  /v1/status:
+    get:
+      tags:
+        - System
+      summary: Get API status
+      description: Check the operational status of API services
+      responses:
+        '200':
+          description: API status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        services:
+          type: object
+          properties:
+            gestureLibrary:
+              type: boolean
+            modelVersioning:
+              type: boolean
+            transferLearning:
+              type: boolean
+            abTesting:
+              type: boolean
+
+    TranslationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            originalText:
+              type: string
+              example: "Hello, how are you?"
+            targetLibrary:
+              type: string
+              example: "BSL"
+            sequence:
+              type: array
+              items:
+                $ref: '#/components/schemas/GestureSequenceItem'
+            metadata:
+              $ref: '#/components/schemas/TranslationMetadata'
+            apiVersion:
+              type: string
+              example: "1.0"
+            requestMetadata:
+              $ref: '#/components/schemas/RequestMetadata'
+
+    GestureSequenceItem:
+      type: object
+      properties:
+        word:
+          type: string
+          example: "HELLO"
+        gesture:
+          $ref: '#/components/schemas/Gesture'
+        method:
+          type: string
+          enum: [sign, phrase, fingerspelling]
+          example: "sign"
+        library:
+          type: string
+          example: "BSL"
+        partOf:
+          type: string
+          description: Original word if this is part of fingerspelling
+
+    Gesture:
+      type: object
+      properties:
+        handshape:
+          type: string
+          example: "open_hand"
+        orientation:
+          type: string
+          example: "palm_forward"
+        location:
+          type: string
+          example: "forehead"
+        movement:
+          type: string
+          example: "forward_wave"
+        description:
+          type: string
+          example: "Open hand near forehead, wave forward"
+        category:
+          type: string
+          example: "greetings"
+        both_hands:
+          type: boolean
+          example: false
+
+    TranslationMetadata:
+      type: object
+      properties:
+        totalSigns:
+          type: integer
+          example: 4
+        fingerspelledWords:
+          type: integer
+          example: 0
+        directSigns:
+          type: integer
+          example: 4
+        phrases:
+          type: integer
+          example: 0
+
+    RequestMetadata:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        processingTime:
+          type: number
+          description: Processing time in milliseconds
+          example: 45.7
+        apiKey:
+          type: string
+          example: "My App API Key"
+        rateLimitRemaining:
+          type: integer
+          example: 99
+
+    BatchTranslationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            translations:
+              type: array
+              items:
+                type: object
+                properties:
+                  index:
+                    type: integer
+                  text:
+                    type: string
+                  success:
+                    type: boolean
+                  translation:
+                    $ref: '#/components/schemas/TranslationResponse/properties/data'
+                  error:
+                    type: string
+            summary:
+              type: object
+              properties:
+                total:
+                  type: integer
+                successful:
+                  type: integer
+                failed:
+                  type: integer
+
+    GestureLibrary:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "BSL"
+        name:
+          type: string
+          example: "British Sign Language"
+        region:
+          type: string
+          example: "United Kingdom"
+        alphabetSize:
+          type: integer
+          example: 26
+        wordCount:
+          type: integer
+          example: 150
+        phraseCount:
+          type: integer
+          example: 25
+
+    GestureSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            searchTerm:
+              type: string
+            searchedLibraries:
+              type: array
+              items:
+                type: string
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/GestureSearchResult'
+            totalResults:
+              type: integer
+            returnedResults:
+              type: integer
+
+    GestureSearchResult:
+      type: object
+      properties:
+        library:
+          type: string
+          example: "BSL"
+        word:
+          type: string
+          example: "HELLO"
+        gesture:
+          $ref: '#/components/schemas/Gesture'
+        type:
+          type: string
+          enum: [word, letter, number, phrase]
+
+    AdvancedSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            searchCriteria:
+              type: object
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  library:
+                    type: string
+                  word:
+                    type: string
+                  gesture:
+                    $ref: '#/components/schemas/Gesture'
+                  complexity:
+                    type: number
+            totalResults:
+              type: integer
+
+    MLModel:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "gesture-recognition-v2"
+        name:
+          type: string
+          example: "Gesture Recognition Model v2"
+        version:
+          type: string
+          example: "2.1.0"
+        description:
+          type: string
+        modelType:
+          type: string
+          example: "gesture_recognition"
+        accuracy:
+          type: number
+          example: 0.94
+        createdAt:
+          type: string
+          format: date-time
+
+    PredictionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            modelId:
+              type: string
+            modelVersion:
+              type: string
+            predictions:
+              type: array
+              items:
+                type: object
+                properties:
+                  confidence:
+                    type: number
+                    example: 0.85
+                  result:
+                    type: string
+                  alternatives:
+                    type: array
+            processingTime:
+              type: number
+            abTest:
+              type: object
+              nullable: true
+
+    VoiceProcessingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            text:
+              type: string
+              example: "Hello world"
+            confidence:
+              type: number
+              example: 0.92
+            language:
+              type: string
+              example: "en-US"
+            alternatives:
+              type: array
+              items:
+                type: object
+                properties:
+                  text:
+                    type: string
+                  confidence:
+                    type: number
+            processingTime:
+              type: number
+
+    UsageStatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            apiKey:
+              type: string
+            timeframe:
+              type: string
+            requests:
+              type: object
+              properties:
+                total:
+                  type: integer
+                successful:
+                  type: integer
+                failed:
+                  type: integer
+                rateLimited:
+                  type: integer
+            endpoints:
+              type: object
+            quotas:
+              type: object
+              properties:
+                dailyLimit:
+                  type: integer
+                dailyUsed:
+                  type: integer
+                remainingQuota:
+                  type: integer
+
+    StatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            api:
+              type: string
+              example: "operational"
+            services:
+              type: object
+              properties:
+                translation:
+                  type: string
+                gestureLibrary:
+                  type: string
+                models:
+                  type: string
+                voice:
+                  type: string
+            maintenance:
+              type: object
+              properties:
+                scheduled:
+                  type: boolean
+                nextWindow:
+                  type: string
+                  nullable: true
+            performance:
+              type: object
+              properties:
+                averageResponseTime:
+                  type: string
+                uptime:
+                  type: string
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error type identifier
+        message:
+          type: string
+          description: Human readable error message
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid parameters or request format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "validation_failed"
+            message: "Text is required and must be under 1000 characters"
+            timestamp: "2024-01-01T00:00:00Z"
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "unauthorized"
+            message: "API key required"
+            timestamp: "2024-01-01T00:00:00Z"
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions or access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "insufficient_permissions"
+            message: "This endpoint requires translate:write permission"
+            timestamp: "2024-01-01T00:00:00Z"
+
+    RateLimited:
+      description: Too Many Requests - Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: Request limit per window
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Time when the rate limit resets
+          schema:
+            type: string
+            format: date-time
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "quota_exceeded"
+            message: "Daily quota exceeded"
+            timestamp: "2024-01-01T00:00:00Z"
+
+    InternalError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "internal_server_error"
+            message: "An unexpected error occurred"
+            timestamp: "2024-01-01T00:00:00Z"
+
+tags:
+  - name: Documentation
+    description: API documentation and metadata
+  - name: System
+    description: System health and status endpoints
+  - name: Translation
+    description: Text to sign language translation services
+  - name: Gestures
+    description: Sign language gesture library and search
+  - name: Models
+    description: Machine learning model services
+  - name: Voice
+    description: Voice input and speech recognition
+  - name: Analytics
+    description: Usage statistics and analytics
+
+externalDocs:
+  description: Developer Guide and Tutorials
+  url: https://docs.signlanguagetranslator.com

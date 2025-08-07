@@ -1,0 +1,226 @@
+name: Security Scanning
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Daily at 2 AM UTC
+  workflow_dispatch:
+
+jobs:
+  # Dependency vulnerability scanning
+  dependency-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd backend && npm ci
+          cd ../frontend && npm ci
+      
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level moderate
+          cd backend && npm audit --audit-level moderate
+          cd ../frontend && npm audit --audit-level moderate
+      
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+      
+      - name: Upload Snyk results to GitHub
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: snyk.sarif
+
+  # Secret scanning
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # Container image scanning
+  container-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker image
+        run: |
+          docker build -t sign-language-translator:latest --target production .
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'sign-language-translator:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run Anchore Container Scan
+        uses: anchore/scan-action@v3
+        with:
+          image: 'sign-language-translator:latest'
+          severity-cutoff: high
+          fail-build: false
+      
+      - name: Upload Anchore scan SARIF report
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: results.sarif
+
+  # Infrastructure as Code scanning
+  iac-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Checkov action
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile,secrets
+          output_format: sarif
+          output_file_path: checkov.sarif
+      
+      - name: Upload Checkov scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+
+  # SAST (Static Application Security Testing)
+  sast-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+          queries: security-extended
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+      
+      - name: Run ESLint security scan
+        run: |
+          npm install -g eslint eslint-plugin-security
+          cd backend && npm ci
+          npx eslint --ext .js --format sarif --output-file eslint-results.sarif . || true
+          cd ../frontend && npm ci
+          npx eslint --ext .ts,.tsx --format sarif --output-file eslint-results.sarif . || true
+      
+      - name: Upload ESLint results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: backend/eslint-results.sarif
+
+  # License compliance checking
+  license-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install license checker
+        run: npm install -g license-checker
+      
+      - name: Check backend licenses
+        run: |
+          cd backend && npm ci
+          license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;CC0-1.0' --excludePrivatePackages
+      
+      - name: Check frontend licenses
+        run: |
+          cd frontend && npm ci
+          license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;CC0-1.0' --excludePrivatePackages
+
+  # Security policy compliance
+  compliance-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for security policy
+        run: |
+          if [ ! -f "SECURITY.md" ]; then
+            echo "❌ SECURITY.md not found"
+            exit 1
+          else
+            echo "✅ SECURITY.md found"
+          fi
+      
+      - name: Check for code of conduct
+        run: |
+          if [ ! -f "CODE_OF_CONDUCT.md" ]; then
+            echo "❌ CODE_OF_CONDUCT.md not found"
+            exit 1
+          else
+            echo "✅ CODE_OF_CONDUCT.md found"
+          fi
+      
+      - name: Check for GDPR compliance documentation
+        run: |
+          if [ ! -d "docs/gdpr" ] && [ ! -f "PRIVACY.md" ]; then
+            echo "❌ GDPR compliance documentation not found"
+            exit 1
+          else
+            echo "✅ GDPR compliance documentation found"
+          fi
+
+  # Notify security team
+  notify-security:
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, secret-scan, container-scan, sast-scan]
+    if: failure()
+    steps:
+      - name: Notify security team
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: '🚨 Security scan detected vulnerabilities! Please review the security tab.'
+          webhook_url: ${{ secrets.SECURITY_SLACK_WEBHOOK_URL }}

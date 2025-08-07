@@ -50,7 +50,6 @@ export default function Home() {
                         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
                             <div className="flex-1">
                                 <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 flex items-center gap-3 mb-2">
-                                    <span className="text-4xl" role="img" aria-label="Sign language gesture">🤟</span>
                                     Real-Time Sign Language Translator
                                 </h1>
                                 <p className="text-gray-700 text-lg max-w-3xl">
@@ -61,21 +60,18 @@ export default function Home() {
                                         href="/learn"
                                         className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                                     >
-                                        <span role="img" aria-label="Learn">📚</span>
                                         Learn ASL
                                     </a>
                                     <a
                                         href="/communicate"
                                         className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
                                     >
-                                        <span role="img" aria-label="Communicate">💬</span>
                                         Communicate
                                     </a>
                                     <a
                                         href="/text-to-sign"
                                         className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
                                     >
-                                        <span role="img" aria-label="Avatar">🤖</span>
                                         Text to Sign
                                     </a>
                                 </div>
@@ -84,11 +80,9 @@ export default function Home() {
                             {/* Accessibility status indicators - Fixed positioning */}
                             <div className="flex flex-wrap gap-3" role="complementary" aria-label="Accessibility status">
                                 <div className="flex items-center gap-2 bg-green-100 border-2 border-green-500 text-green-800 px-4 py-2 rounded-lg font-bold text-sm">
-                                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" aria-hidden="true"></div>
                                     <span>WCAG AA Compliant</span>
                                 </div>
                                 <div className="flex items-center gap-2 bg-blue-100 border-2 border-blue-500 text-blue-800 px-4 py-2 rounded-lg font-bold text-sm">
-                                    <span role="img" aria-label="Accessibility">♿</span>
                                     <span>Screen Reader Ready</span>
                                 </div>
                             </div>
@@ -108,7 +102,6 @@ export default function Home() {
                             <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
                                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
                                     <h2 id="camera-section-title" className="text-2xl font-bold flex items-center gap-3">
-                                        <span role="img" aria-label="Camera">📹</span>
                                         Sign Language Camera
                                     </h2>
                                     <p className="text-blue-100 mt-2">Position yourself clearly in the camera view for best results</p>
@@ -144,7 +137,6 @@ export default function Home() {
                             <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden h-fit">
                                 <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6">
                                     <h2 id="translation-section-title" className="text-2xl font-bold flex items-center gap-3">
-                                        <span role="img" aria-label="Translation">🗣️</span>
                                         Live Translation
                                     </h2>
                                     <p className="text-orange-100 mt-2">Real-time sign language to text conversion</p>
@@ -181,7 +173,6 @@ export default function Home() {
                         <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
                             <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6">
                                 <h2 id="status-section-title" className="text-2xl font-bold flex items-center gap-3">
-                                    <span role="img" aria-label="System status">⚡</span>
                                     System Status & Performance
                                 </h2>
                                 <p className="text-green-100 mt-2">Real-time monitoring of all system components</p>
@@ -200,7 +191,7 @@ export default function Home() {
                                         </div>
                                         <div className="font-bold text-gray-800 text-lg mb-1">Frontend</div>
                                         <div className="text-sm text-gray-600 mb-2">Status: Connected</div>
-                                        <div className="text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded">✓ UI Responsive</div>
+                                        <div className="text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded">UI Responsive</div>
                                     </div>
 
                                     {/* Backend API Status */}
@@ -214,7 +205,7 @@ export default function Home() {
                                         </div>
                                         <div className="font-bold text-gray-800 text-lg mb-1">Backend API</div>
                                         <div className="text-sm text-gray-600 mb-2">Status: Ready</div>
-                                        <div className="text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded">✓ ML Models Loaded</div>
+                                        <div className="text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded">ML Models Loaded</div>
                                     </div>
 
                                     {/* Translation Engine Status */}
@@ -228,7 +219,7 @@ export default function Home() {
                                         </div>
                                         <div className="font-bold text-gray-800 text-lg mb-1">Translation</div>
                                         <div className="text-sm text-gray-600 mb-2">Status: Active</div>
-                                        <div className="text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded">✓ 95.2% Accuracy</div>
+                                        <div className="text-xs text-green-700 font-semibold bg-green-100 px-2 py-1 rounded">95.2% Accuracy</div>
                                     </div>
 
                                     {/* Performance Metrics */}
@@ -242,14 +233,13 @@ export default function Home() {
                                         </div>
                                         <div className="font-bold text-gray-800 text-lg mb-1">Performance</div>
                                         <div className="text-sm text-gray-600 mb-2">Latency: 45ms</div>
-                                        <div className="text-xs text-blue-700 font-semibold bg-blue-100 px-2 py-1 rounded">✓ Real-time Ready</div>
+                                        <div className="text-xs text-blue-700 font-semibold bg-blue-100 px-2 py-1 rounded">Real-time Ready</div>
                                     </div>
                                 </div>
 
                                 {/* Accessibility Features Status */}
                                 <div className="mt-8 pt-6 border-t-2 border-gray-200">
                                     <h3 className="font-bold text-gray-800 mb-6 text-xl flex items-center gap-2">
-                                        <span role="img" aria-label="Accessibility">♿</span>
                                         Accessibility Features Active
                                     </h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -283,7 +273,6 @@ export default function Home() {
                     >
                         <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-8">
                             <h2 id="quick-controls-title" className="text-2xl font-bold text-gray-900 mb-6 text-center flex items-center justify-center gap-3">
-                                <span role="img" aria-label="Controls">🎛️</span>
                                 Quick Access Controls
                             </h2>
 
@@ -296,7 +285,6 @@ export default function Home() {
                                     className="flex items-center gap-3 bg-green-600 hover:bg-green-700 focus:bg-green-700 text-white px-8 py-5 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300 min-w-60 justify-center shadow-lg"
                                     aria-describedby="emergency-help-desc"
                                 >
-                                    <span className="text-2xl" role="img" aria-label="Emergency">🚨</span>
                                     Emergency Help
                                 </button>
                                 <div id="emergency-help-desc" className="sr-only">
@@ -308,7 +296,6 @@ export default function Home() {
                                     className="flex items-center gap-3 bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 text-white px-8 py-5 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 min-w-60 justify-center shadow-lg"
                                     aria-describedby="text-to-sign-desc"
                                 >
-                                    <span className="text-2xl" role="img" aria-label="Avatar">🤖</span>
                                     Text-to-Sign Avatar
                                 </a>
                                 <div id="text-to-sign-desc" className="sr-only">
@@ -320,7 +307,6 @@ export default function Home() {
                                     className="flex items-center gap-3 bg-orange-600 hover:bg-orange-700 focus:bg-orange-700 text-white px-8 py-5 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 focus:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300 min-w-60 justify-center shadow-lg"
                                     aria-describedby="settings-desc"
                                 >
-                                    <span className="text-2xl" role="img" aria-label="Settings">⚙️</span>
                                     Accessibility Settings
                                 </button>
                                 <div id="settings-desc" className="sr-only">

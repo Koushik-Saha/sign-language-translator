@@ -496,4 +496,13 @@ class AdvancedRateLimiter {
     }
 }
 
-module.exports = new AdvancedRateLimiter();
+const rateLimiter = new AdvancedRateLimiter();
+
+// Export different rate limiting strategies
+module.exports = rateLimiter.createGeneralRateLimit();
+module.exports.strict = rateLimiter.createStrictRateLimit();
+module.exports.slowDown = rateLimiter.createSlowDown();
+module.exports.dosProtection = rateLimiter.dosProtection();
+module.exports.connectionLimit = rateLimiter.createConnectionLimit();
+module.exports.bandwidthLimit = rateLimiter.createBandwidthLimit();
+module.exports.rateLimiter = rateLimiter;

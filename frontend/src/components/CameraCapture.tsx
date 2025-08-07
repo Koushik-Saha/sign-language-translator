@@ -24,7 +24,7 @@ export default function CameraCapture() {
     // NEW: Large camera view state
     const [showLargeCameraView, setShowLargeCameraView] = useState(false);
 
-    const { initializeHandDetection, currentGesture } = useHandDetection();
+    const { initializeHandDetection, currentGesture, currentLandmarks } = useHandDetection();
     const {
         currentWord,
         setCurrentWord,
@@ -99,12 +99,12 @@ export default function CameraCapture() {
             if (recognitionMode === 'word' || recognitionMode === 'hybrid') {
                 processGestureForWord(
                     currentGesture.letter,
-                    [], // landmarks would be passed from hand detection
+                    currentLandmarks || [], // Pass actual landmarks from hand detection
                     currentGesture.confidence
                 );
             }
         }
-    }, [currentGesture, recognitionMode, processGestureForWord]);
+    }, [currentGesture, currentLandmarks, recognitionMode, processGestureForWord]);
 
     const startCamera = async () => {
         try {
@@ -223,7 +223,6 @@ export default function CameraCapture() {
             {/* Recognition Mode Selector */}
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl p-4">
                 <h3 className="font-bold text-purple-900 mb-3 text-lg flex items-center gap-2">
-                    <span role="img" aria-label="Recognition mode">🎯</span>
                     Recognition Mode
                 </h3>
 
@@ -240,9 +239,6 @@ export default function CameraCapture() {
                             aria-pressed={recognitionMode === mode}
                         >
                             <div className="text-center">
-                                <div className="text-lg mb-1">
-                                    {mode === 'letter' ? '🔤' : mode === 'word' ? '💬' : '🔄'}
-                                </div>
                                 <div className="capitalize">{mode}</div>
                                 <div className="text-xs mt-1 opacity-75">
                                     {mode === 'letter' ? 'Spell words letter by letter' :
@@ -531,7 +527,6 @@ export default function CameraCapture() {
             {/* Main Control Buttons */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    <span role="img" aria-label="Controls">🎛️</span>
                     Camera Controls
                 </h3>
 
@@ -543,7 +538,7 @@ export default function CameraCapture() {
                             hasPermission ? 'bg-gray-300 text-gray-500' : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                     >
-                        📹 Start Camera
+                        Start Camera
                     </button>
 
                     <button
@@ -553,7 +548,7 @@ export default function CameraCapture() {
                             !hasPermission || isDetectionActive ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 hover:bg-blue-700 text-white'
                         }`}
                     >
-                        🔍 Start Detection
+                        Start Detection
                     </button>
 
                     <button
@@ -572,7 +567,7 @@ export default function CameraCapture() {
                             !hasPermission ? 'bg-gray-300 text-gray-500' : 'bg-red-600 hover:bg-red-700 text-white'
                         }`}
                     >
-                        ⏹️ Stop Camera
+                        Stop Camera
                     </button>
                 </div>
             </div>
