@@ -87,6 +87,7 @@ const metricsRoutes = require('./routes/metrics');
 const gestureLibraryRoutes = require('./routes/gestureLibrary');
 const publicApiRoutes = require('./routes/publicApi');
 const apiKeysRoutes = require('./routes/apiKeys');
+const exportRoutes = require('./routes/export');
 
 // Initialize Socket.IO
 const SocketManager = require('./socket/index');
@@ -107,6 +108,7 @@ app.use('/api/metrics', metricsRoutes);
 app.use('/api/gestures', gestureLibraryRoutes);
 app.use('/api/public', publicApiRoutes);
 app.use('/api/api-keys', apiKeysRoutes);
+app.use('/api/export', exportRoutes);
 
 // Static file serving for uploaded content
 app.use('/api/training-data/video', express.static(path.join(__dirname, 'uploads/training-data')));

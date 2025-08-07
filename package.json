@@ -1,6 +1,0 @@
-{
-  "devDependencies": {
-    "artillery": "^2.0.23",
-    "k6": "^0.0.0"
-  }
-}

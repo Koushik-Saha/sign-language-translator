@@ -5,9 +5,12 @@ const ffmpegPath = require('ffmpeg-static');
 const puppeteer = require('puppeteer');
 const { jsPDF } = require('jspdf');
 const htmlPdf = require('html-pdf-node');
+const PDFDocument = require('pdfkit');
+const { createCanvas, loadImage } = require('canvas');
 const archiver = require('archiver');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('./logger');
+const gestureLibraryService = require('./gestureLibraryService');
 
 // Set FFmpeg path
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -16,13 +19,65 @@ class ExportService {
     constructor() {
         this.exportDir = path.join(__dirname, '../exports');
         this.tempDir = path.join(__dirname, '../temp');
+        this.assetsDir = path.join(__dirname, '../assets');
         this.ensureDirectories();
+        
+        // Enhanced video settings
+        this.videoSettings = {
+            fps: 30,
+            duration: 2500, // ms per gesture (increased for better visibility)
+            width: 1920,
+            height: 1080,
+            backgroundColor: '#ffffff',
+            gestureSize: { width: 400, height: 400 },
+            subtitleStyle: {
+                fontSize: 32,
+                fontColor: '#ffffff',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                position: 'bottom'
+            }
+        };
+
+        // Enhanced PDF settings
+        this.pdfSettings = {
+            pageSize: 'A4',
+            margin: 60,
+            fontSize: {
+                title: 28,
+                subtitle: 20,
+                body: 14,
+                caption: 11,
+                small: 9
+            },
+            colors: {
+                primary: '#2563eb',
+                secondary: '#64748b',
+                text: '#1e293b',
+                accent: '#10b981',
+                light: '#f8fafc'
+            },
+            spacing: {
+                line: 1.4,
+                paragraph: 16,
+                section: 24
+            }
+        };
     }
 
     async ensureDirectories() {
         try {
             await fs.mkdir(this.exportDir, { recursive: true });
             await fs.mkdir(this.tempDir, { recursive: true });
+            await fs.mkdir(this.assetsDir, { recursive: true });
+            
+            // Create subdirectories for different export types
+            await fs.mkdir(path.join(this.exportDir, 'videos'), { recursive: true });
+            await fs.mkdir(path.join(this.exportDir, 'pdfs'), { recursive: true });
+            await fs.mkdir(path.join(this.exportDir, 'images'), { recursive: true });
+            await fs.mkdir(path.join(this.exportDir, 'packages'), { recursive: true });
+            await fs.mkdir(path.join(this.exportDir, 'json'), { recursive: true });
+            
+            logger.info('Export service directories initialized');
         } catch (error) {
             logger.error('Failed to create export directories', { error: error.message });
         }
@@ -709,6 +764,594 @@ class ExportService {
         } catch (error) {
             logger.error('Failed to cleanup old exports', { error: error.message });
         }
+    }
+
+    // Enhanced export methods for new functionality
+
+    /**
+     * Export translation as enhanced video with gesture visualization
+     */
+    async exportEnhancedVideo(translationData, options = {}) {
+        try {
+            const {
+                userId,
+                format = 'mp4',
+                quality = 'high',
+                includeSubtitles = true,
+                includeInstructions = false,
+                showTimestamps = false,
+                backgroundColor = '#ffffff',
+                avatarStyle = 'realistic',
+                gestureSpeed = 'normal'
+            } = options;
+
+            const exportId = uuidv4();
+            const filename = `enhanced_translation_${exportId}.${format}`;
+            const outputPath = path.join(this.exportDir, 'videos', filename);
+            const tempFramesDir = path.join(this.tempDir, `frames_${exportId}`);
+
+            logger.info('Starting enhanced video export', {
+                exportId,
+                userId,
+                sequenceLength: translationData.sequence?.length || 0,
+                format,
+                quality
+            });
+
+            // Create temporary frames directory
+            await fs.mkdir(tempFramesDir, { recursive: true });
+
+            // Generate enhanced frames with gesture visualization
+            const frames = await this.generateEnhancedVideoFrames(translationData, tempFramesDir, {
+                backgroundColor,
+                includeSubtitles,
+                includeInstructions,
+                showTimestamps,
+                avatarStyle,
+                gestureSpeed
+            });
+
+            // Create video from frames with enhanced settings
+            await this.createEnhancedVideoFromFrames(frames, outputPath, {
+                format,
+                quality,
+                fps: this.videoSettings.fps,
+                includeSubtitles
+            });
+
+            // Generate additional assets
+            let subtitlePath = null;
+            let instructionPath = null;
+
+            if (includeSubtitles) {
+                subtitlePath = await this.generateEnhancedSubtitles(translationData, exportId);
+            }
+
+            if (includeInstructions) {
+                instructionPath = await this.generateVideoInstructions(translationData, exportId);
+            }
+
+            // Clean up temporary frames
+            await this.cleanupDirectory(tempFramesDir);
+
+            const stats = await fs.stat(outputPath);
+            const duration = translationData.sequence ? 
+                translationData.sequence.length * this.videoSettings.duration : 5000;
+
+            logger.info('Enhanced video export completed', {
+                exportId,
+                userId,
+                fileSize: stats.size,
+                outputPath
+            });
+
+            return {
+                exportId,
+                type: 'enhanced_video',
+                filename,
+                filePath: outputPath,
+                subtitlePath,
+                instructionPath,
+                fileSize: stats.size,
+                duration,
+                metadata: {
+                    originalText: translationData.originalText,
+                    targetLibrary: translationData.targetLibrary,
+                    gestureCount: translationData.sequence?.length || 0,
+                    format,
+                    quality,
+                    avatarStyle,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+        } catch (error) {
+            logger.error('Enhanced video export failed', {
+                error: error.message,
+                stack: error.stack,
+                userId: options.userId
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * Export translation as comprehensive PDF guide
+     */
+    async exportComprehensivePDF(translationData, options = {}) {
+        try {
+            const {
+                userId,
+                includeImages = true,
+                includeStepByStep = true,
+                includeMetadata = true,
+                includeGlossary = true,
+                includePracticeSection = true,
+                customBranding = null,
+                language = 'en',
+                theme = 'professional'
+            } = options;
+
+            const exportId = uuidv4();
+            const filename = `comprehensive_guide_${exportId}.pdf`;
+            const outputPath = path.join(this.exportDir, 'pdfs', filename);
+
+            logger.info('Starting comprehensive PDF export', {
+                exportId,
+                userId,
+                sequenceLength: translationData.sequence?.length || 0,
+                includeImages,
+                theme
+            });
+
+            // Create PDF document with enhanced settings
+            const doc = new PDFDocument({
+                size: this.pdfSettings.pageSize,
+                margin: this.pdfSettings.margin,
+                bufferPages: true,
+                info: {
+                    Title: `Comprehensive Sign Language Guide - ${translationData.originalText}`,
+                    Author: 'Sign Language Translator',
+                    Subject: `${translationData.targetLibrary} Sign Language Translation Guide`,
+                    Creator: 'Sign Language Translator API v2.0',
+                    Producer: 'Enhanced Export Service',
+                    CreationDate: new Date(),
+                    Keywords: `sign language, ${translationData.targetLibrary}, translation, guide, tutorial`
+                }
+            });
+
+            // Create write stream
+            const stream = doc.pipe(require('fs').createWriteStream(outputPath));
+
+            // Add comprehensive content sections
+            await this.addPDFCoverPage(doc, translationData, customBranding);
+            await this.addPDFTableOfContents(doc, translationData);
+            await this.addPDFExecutiveSummary(doc, translationData, includeMetadata);
+            await this.addPDFDetailedInstructions(doc, translationData, { includeImages, includeStepByStep });
+            
+            if (includeGlossary) {
+                await this.addPDFGlossary(doc, translationData);
+            }
+            
+            if (includePracticeSection) {
+                await this.addPDFPracticeSection(doc, translationData);
+            }
+
+            await this.addPDFResourcesAndReferences(doc, translationData);
+            await this.addPDFFooter(doc, exportId);
+
+            // Finalize PDF
+            doc.end();
+
+            // Wait for PDF to be written
+            await new Promise((resolve, reject) => {
+                stream.on('finish', resolve);
+                stream.on('error', reject);
+            });
+
+            const stats = await fs.stat(outputPath);
+
+            logger.info('Comprehensive PDF export completed', {
+                exportId,
+                userId,
+                fileSize: stats.size,
+                pageCount: doc.bufferedPageRange().count
+            });
+
+            return {
+                exportId,
+                type: 'comprehensive_pdf',
+                filename,
+                filePath: outputPath,
+                fileSize: stats.size,
+                pageCount: doc.bufferedPageRange().count,
+                metadata: {
+                    originalText: translationData.originalText,
+                    targetLibrary: translationData.targetLibrary,
+                    gestureCount: translationData.sequence?.length || 0,
+                    includeImages,
+                    includeStepByStep,
+                    includeGlossary,
+                    includePracticeSection,
+                    theme,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+        } catch (error) {
+            logger.error('Comprehensive PDF export failed', {
+                error: error.message,
+                stack: error.stack,
+                userId: options.userId
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * Export complete learning package with multiple formats
+     */
+    async exportLearningPackage(translationData, options = {}) {
+        try {
+            const {
+                userId,
+                includeVideo = true,
+                includePDF = true,
+                includeImages = true,
+                includeAudio = false,
+                includeJSON = true,
+                includeQuiz = false,
+                packageFormat = 'zip',
+                quality = 'high'
+            } = options;
+
+            const exportId = uuidv4();
+            const packageName = `learning_package_${exportId}`;
+            const packageDir = path.join(this.tempDir, packageName);
+            const outputPath = path.join(this.exportDir, 'packages', `${packageName}.${packageFormat}`);
+
+            logger.info('Starting learning package export', {
+                exportId,
+                userId,
+                includeVideo,
+                includePDF,
+                includeImages,
+                includeAudio
+            });
+
+            // Create package directory
+            await fs.mkdir(packageDir, { recursive: true });
+
+            const packageContents = [];
+
+            // Export enhanced video if requested
+            if (includeVideo) {
+                const videoExport = await this.exportEnhancedVideo(translationData, { 
+                    userId, 
+                    quality,
+                    includeSubtitles: true,
+                    includeInstructions: true 
+                });
+                const videoDestPath = path.join(packageDir, videoExport.filename);
+                await fs.copyFile(videoExport.filePath, videoDestPath);
+                packageContents.push({
+                    type: 'video',
+                    filename: videoExport.filename,
+                    size: videoExport.fileSize,
+                    description: 'Enhanced video with gesture visualization'
+                });
+
+                // Include subtitle and instruction files
+                if (videoExport.subtitlePath) {
+                    const subtitleDestPath = path.join(packageDir, `${path.parse(videoExport.filename).name}.srt`);
+                    await fs.copyFile(videoExport.subtitlePath, subtitleDestPath);
+                }
+
+                if (videoExport.instructionPath) {
+                    const instructionDestPath = path.join(packageDir, `${path.parse(videoExport.filename).name}_instructions.txt`);
+                    await fs.copyFile(videoExport.instructionPath, instructionDestPath);
+                }
+            }
+
+            // Export comprehensive PDF if requested
+            if (includePDF) {
+                const pdfExport = await this.exportComprehensivePDF(translationData, { 
+                    userId,
+                    includeImages,
+                    includeGlossary: true,
+                    includePracticeSection: true
+                });
+                const pdfDestPath = path.join(packageDir, pdfExport.filename);
+                await fs.copyFile(pdfExport.filePath, pdfDestPath);
+                packageContents.push({
+                    type: 'pdf',
+                    filename: pdfExport.filename,
+                    size: pdfExport.fileSize,
+                    pageCount: pdfExport.pageCount,
+                    description: 'Comprehensive learning guide with detailed instructions'
+                });
+            }
+
+            // Generate individual gesture images if requested
+            if (includeImages && translationData.sequence) {
+                const imagesDir = path.join(packageDir, 'gesture_images');
+                await fs.mkdir(imagesDir, { recursive: true });
+                
+                for (const [index, item] of translationData.sequence.entries()) {
+                    const imagePath = await this.generateDetailedGestureImage(item, {
+                        outputDir: imagesDir,
+                        filename: `${String(index + 1).padStart(3, '0')}_${item.word}.png`,
+                        includeDescription: true,
+                        highQuality: true
+                    });
+                    
+                    if (imagePath) {
+                        packageContents.push({
+                            type: 'image',
+                            filename: path.basename(imagePath),
+                            word: item.word,
+                            description: `Detailed gesture visualization for "${item.word}"`
+                        });
+                    }
+                }
+            }
+
+            // Generate quiz/practice materials if requested
+            if (includeQuiz && translationData.sequence) {
+                const quizPath = await this.generatePracticeQuiz(translationData, packageDir, exportId);
+                if (quizPath) {
+                    packageContents.push({
+                        type: 'quiz',
+                        filename: path.basename(quizPath),
+                        description: 'Interactive practice quiz for gesture recognition'
+                    });
+                }
+            }
+
+            // Export enhanced JSON data if requested
+            if (includeJSON) {
+                const jsonPath = path.join(packageDir, 'translation_data.json');
+                await fs.writeFile(jsonPath, JSON.stringify({
+                    ...translationData,
+                    exportMetadata: {
+                        exportId,
+                        exportedAt: new Date().toISOString(),
+                        exportOptions: options,
+                        packageContents: packageContents.map(item => ({
+                            type: item.type,
+                            filename: item.filename,
+                            description: item.description
+                        }))
+                    }
+                }, null, 2));
+                
+                packageContents.push({
+                    type: 'json',
+                    filename: 'translation_data.json',
+                    description: 'Complete translation data with metadata'
+                });
+            }
+
+            // Create comprehensive README
+            await this.createLearningPackageReadme(packageDir, translationData, packageContents);
+
+            // Create package archive
+            await this.createEnhancedArchive(packageDir, outputPath, packageFormat);
+
+            // Clean up temporary directory
+            await this.cleanupDirectory(packageDir);
+
+            const stats = await fs.stat(outputPath);
+
+            logger.info('Learning package export completed', {
+                exportId,
+                userId,
+                packageSize: stats.size,
+                contentCount: packageContents.length
+            });
+
+            return {
+                exportId,
+                type: 'learning_package',
+                filename: path.basename(outputPath),
+                filePath: outputPath,
+                fileSize: stats.size,
+                contents: packageContents,
+                metadata: {
+                    originalText: translationData.originalText,
+                    targetLibrary: translationData.targetLibrary,
+                    packageFormat,
+                    quality,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+        } catch (error) {
+            logger.error('Learning package export failed', {
+                error: error.message,
+                stack: error.stack,
+                userId: options.userId
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * Generate enhanced video frames with detailed gesture visualization
+     */
+    async generateEnhancedVideoFrames(translationData, outputDir, options = {}) {
+        const frames = [];
+        
+        if (!translationData.sequence || translationData.sequence.length === 0) {
+            // Generate placeholder frames for empty sequence
+            const frameCount = Math.floor(3000 * this.videoSettings.fps / 1000); // 3 seconds
+            for (let frame = 0; frame < frameCount; frame++) {
+                const framePath = path.join(outputDir, `frame_${String(frame).padStart(6, '0')}.png`);
+                await this.generatePlaceholderFrame(framePath, 'No gestures to display');
+                frames.push(framePath);
+            }
+            return frames;
+        }
+        
+        for (const [index, item] of translationData.sequence.entries()) {
+            const frameCount = Math.floor(this.videoSettings.duration * this.videoSettings.fps / 1000);
+            
+            for (let frame = 0; frame < frameCount; frame++) {
+                const framePath = path.join(outputDir, `frame_${String(index).padStart(3, '0')}_${String(frame).padStart(3, '0')}.png`);
+                
+                await this.generateEnhancedGestureFrame(item, framePath, {
+                    frameNumber: frame,
+                    totalFrames: frameCount,
+                    sequenceIndex: index,
+                    totalSequences: translationData.sequence.length,
+                    ...options
+                });
+                
+                frames.push(framePath);
+            }
+        }
+        
+        return frames;
+    }
+
+    /**
+     * Generate enhanced gesture frame with detailed visualization
+     */
+    async generateEnhancedGestureFrame(gestureItem, outputPath, options = {}) {
+        const {
+            frameNumber = 0,
+            totalFrames = 30,
+            sequenceIndex = 0,
+            totalSequences = 1,
+            backgroundColor = '#ffffff',
+            includeSubtitles = true,
+            includeInstructions = false,
+            showTimestamps = false,
+            avatarStyle = 'realistic'
+        } = options;
+
+        const canvas = createCanvas(this.videoSettings.width, this.videoSettings.height);
+        const ctx = canvas.getContext('2d');
+
+        // Fill background with gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, backgroundColor);
+        gradient.addColorStop(1, this.lightenColor(backgroundColor, -10));
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw enhanced gesture visualization
+        await this.drawEnhancedGestureVisualization(ctx, gestureItem, {
+            x: canvas.width / 2,
+            y: canvas.height / 2 - 50,
+            size: this.videoSettings.gestureSize,
+            animationProgress: frameNumber / totalFrames,
+            style: avatarStyle
+        });
+
+        // Add progress indicator
+        this.drawProgressIndicator(ctx, {
+            current: sequenceIndex + frameNumber / totalFrames,
+            total: totalSequences,
+            x: 100,
+            y: 50,
+            width: canvas.width - 200,
+            height: 8
+        });
+
+        // Add enhanced subtitles
+        if (includeSubtitles) {
+            this.drawEnhancedSubtitle(ctx, gestureItem.word, {
+                x: canvas.width / 2,
+                y: canvas.height - 120,
+                style: this.videoSettings.subtitleStyle
+            });
+        }
+
+        // Add instruction panel
+        if (includeInstructions && gestureItem.gesture) {
+            this.drawInstructionPanel(ctx, gestureItem.gesture, {
+                x: 50,
+                y: canvas.height / 2 + 200,
+                width: canvas.width - 100,
+                height: 150
+            });
+        }
+
+        // Add timestamp if requested
+        if (showTimestamps) {
+            const currentTime = (sequenceIndex * this.videoSettings.duration + 
+                frameNumber * (this.videoSettings.duration / totalFrames)) / 1000;
+            this.drawTimestamp(ctx, currentTime, {
+                x: canvas.width - 150,
+                y: 50
+            });
+        }
+
+        // Save frame
+        const buffer = canvas.toBuffer('image/png');
+        await fs.writeFile(outputPath, buffer);
+    }
+
+    /**
+     * Generate placeholder frame for empty content
+     */
+    async generatePlaceholderFrame(outputPath, message = 'No content available') {
+        const canvas = createCanvas(this.videoSettings.width, this.videoSettings.height);
+        const ctx = canvas.getContext('2d');
+
+        // Fill background
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw message
+        ctx.fillStyle = '#64748b';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+
+        // Save frame
+        const buffer = canvas.toBuffer('image/png');
+        await fs.writeFile(outputPath, buffer);
+    }
+
+    /**
+     * Clean up directory recursively
+     */
+    async cleanupDirectory(dirPath) {
+        try {
+            const files = await fs.readdir(dirPath);
+            
+            for (const file of files) {
+                const filePath = path.join(dirPath, file);
+                const stat = await fs.stat(filePath);
+                
+                if (stat.isDirectory()) {
+                    await this.cleanupDirectory(filePath);
+                } else {
+                    await fs.unlink(filePath);
+                }
+            }
+            
+            await fs.rmdir(dirPath);
+        } catch (error) {
+            logger.warn('Cleanup failed', { dirPath, error: error.message });
+        }
+    }
+
+    /**
+     * Utility function to lighten/darken colors
+     */
+    lightenColor(color, percent) {
+        const num = parseInt(color.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const B = (num >> 8 & 0x00FF) + amt;
+        const G = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + 
+            (B < 255 ? B < 1 ? 0 : B : 255) * 0x100 + 
+            (G < 255 ? G < 1 ? 0 : G : 255)).toString(16).slice(1);
     }
 }
 
