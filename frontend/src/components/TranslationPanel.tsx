@@ -42,7 +42,7 @@ export default function TranslationPanel() {
                             : 'bg-gray-100 text-gray-600'
                     }`}
                 >
-                    🔊 {speechEnabled ? 'ON' : 'OFF'}
+                    {speechEnabled ? 'ON' : 'OFF'}
                 </button>
             </div>
 
@@ -75,13 +75,12 @@ export default function TranslationPanel() {
                                 onClick={() => navigator.clipboard.writeText(lastTranslation.translation)}
                                 className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
                             >
-                                📋 Copy
+                                Copy
                             </button>
                         </div>
                     </div>
                 ) : (
                     <div className="text-center py-8">
-                        <div className="text-gray-400 text-lg mb-2">🤟</div>
                         <p className="text-gray-500">
                             Start signing to see translations here
                         </p>
@@ -117,13 +116,13 @@ export default function TranslationPanel() {
                                         className="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
                                         disabled={!speechEnabled}
                                     >
-                                        🔊
+                                        Speak
                                     </button>
                                     <button
                                         onClick={() => navigator.clipboard.writeText(item.translation)}
                                         className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
                                     >
-                                        📋
+                                        Book
                                     </button>
                                 </div>
                             </div>
@@ -131,7 +130,6 @@ export default function TranslationPanel() {
                     </div>
                 ) : (
                     <div className="text-center py-8 text-gray-500">
-                        <div className="text-2xl mb-2">📝</div>
                         <p>Translation history will appear here</p>
                     </div>
                 )}
