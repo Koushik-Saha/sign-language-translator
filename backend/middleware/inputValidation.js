@@ -245,8 +245,15 @@ class InputValidationService {
         }
         
         // Sanitize query parameters
+        // Express 5 exposes req.query as a read-only getter, so assigning to
+        // it throws (and 500s every request). Shadow it with an own property
+        // holding the sanitized copy instead.
         if (req.query && typeof req.query === 'object') {
-          req.query = this.sanitizeObject(req.query);
+          Object.defineProperty(req, 'query', {
+            value: this.sanitizeObject(req.query),
+            configurable: true,
+            writable: true
+          });
         }
         
         // Sanitize params
