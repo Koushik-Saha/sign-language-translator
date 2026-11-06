@@ -1,6 +1,6 @@
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
-const RedisStore = require('rate-limit-redis');
+const { RedisStore } = require('rate-limit-redis');
 const redis = require('redis');
 const logger = require('../services/logger');
 const { ValidationError } = require('./errorHandler');
