@@ -23,7 +23,18 @@ class WordRecognitionService {
     this.vocabularyPath = path.join(__dirname, '../models/vocabulary.json');
     this.embeddingsPath = path.join(__dirname, '../models/embeddings.json');
     
-    this.initialize();
+    // Lazy initialization: building/loading the TF model during startup
+    // saturates the CPU and starves the HTTP server on small instances,
+    // so initialization is deferred until first use (see ensureInitialized).
+    this.initialized = false;
+    this.initPromise = null;
+  }
+
+  async ensureInitialized() {
+    if (!this.initPromise) {
+      this.initPromise = this.initialize().then(() => { this.initialized = true; });
+    }
+    return this.initPromise;
   }
 
   async initialize() {
@@ -269,6 +280,7 @@ class WordRecognitionService {
    */
   async recognizeWords(text, options = {}) {
     try {
+      await this.ensureInitialized();
       const {
         confidence_threshold = 0.7,
         max_suggestions = 5,
@@ -455,6 +467,7 @@ class WordRecognitionService {
    */
   async trainModel(trainingData, options = {}) {
     try {
+      await this.ensureInitialized();
       const {
         epochs = 10,
         batchSize = 32,
@@ -576,6 +589,7 @@ class WordRecognitionService {
    */
   async evaluateModel(testData) {
     try {
+      await this.ensureInitialized();
       if (!testData || testData.length === 0) {
         throw new Error('No test data provided');
       }
@@ -624,6 +638,7 @@ class WordRecognitionService {
       embeddingDim: this.embeddingDim,
       hiddenDim: this.hiddenDim,
       modelLoaded: !!this.model,
+      initialized: this.initialized,
       totalParameters: this.model ? this.model.countParams() : 0,
       architecture: this.model ? {
         layers: this.model.layers.length,
