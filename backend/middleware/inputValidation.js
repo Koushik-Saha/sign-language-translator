@@ -304,10 +304,10 @@ class InputValidationService {
         this.traverseObject(req.query, (value) => checkValue(value, 'query'));
       }
       
-      // Check headers
-      Object.entries(req.headers).forEach(([key, value]) => {
-        checkValue(value, `header:${key}`);
-      });
+      // Headers are intentionally NOT scanned: standard User-Agent/Accept
+      // values contain characters (parentheses, semicolons) that the SQLi /
+      // command-injection patterns match, which blocked every real browser
+      // request with a 400. Body and query remain fully scanned above.
       
       if (suspicious.length > 0) {
         logger.error('Malicious input detected:', {
