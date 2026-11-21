@@ -11,7 +11,7 @@
   "dependencies": {
     "@react-three/drei": "^10.6.1",
     "@react-three/fiber": "^9.3.0",
-    "@tanstack/react-query": "^5.84.1",
+    "@tanstack/react-query": "^5.108.0",
     "@types/js-cookie": "^3.0.6",
     "@types/recharts": "^2.0.1",
     "@types/simple-peer": "^9.11.8",
