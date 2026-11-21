@@ -20,10 +20,10 @@
     "date-fns": "^4.1.0",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.537.0",
-    "next": "15.4.4",
+    "next": "15.5.29",
     "peerjs": "^1.5.5",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react": "19.1.10",
+    "react-dom": "19.1.10",
     "recharts": "^3.1.2",
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
@@ -36,7 +36,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.4.4",
+    "eslint-config-next": "15.5.29",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
